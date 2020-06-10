@@ -2,6 +2,7 @@
 Base Driver class module.
 """
 import logging
+import requests
 
 
 class BaseDriver:
@@ -41,7 +42,7 @@ class BaseDriver:
         """Get object URL"""
         raise NotImplementedError()
 
-    def download(self, url, block_size=2048, **kwargs):
+    def download(self, url, block_size=65536, **kwargs):
         """Download object from URL"""
         raise NotImplementedError()
 
@@ -49,13 +50,24 @@ class BaseDriver:
         """Delete object from a bucket"""
         raise NotImplementedError()
 
-    def clean_bucket(self, bucket_id):
+    def clean_bucket(self, bucket_id, delete_bucket=True):
         """Delete all object from a bucket"""
         for obj in self.list_objects(bucket_id=bucket_id):
             self.delete_object(bucket_id=bucket_id, name=obj)
+        if delete_bucket:
+            self.delete_bucket(bucket_id=bucket_id)
 
     def clean(self):
         """Delete all buckets and all object"""
         for bucket in self.list_buckets():
             self.clean_bucket(bucket_id=bucket['id'])
             self.delete_bucket(bucket_id=bucket['id'])
+
+
+class RequestsMixin:
+    """Mixin providing a HTTTP Session"""
+    @property
+    def session(self):
+        if not hasattr(self, '_session'):
+            self._session = requests.Session()
+        return self._session
