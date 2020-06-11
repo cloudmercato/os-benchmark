@@ -7,9 +7,8 @@ import json
 import logging
 from os_benchmark import utils, benchmarks, errors
 
-logger = logging.getLogger('osb')
-
 ACTIONS = (
+    'help',
     'create-bucket',
     'list-buckets',
     'delete-bucket',
@@ -28,11 +27,17 @@ class Controller:
     def __init__(self, driver, parser):
         self.driver = driver
         self.parser = parser
+        self.subparsers = parser.add_subparsers(dest='action')
+
+    def help(self):
+        self.parser.print_help()
+        self.parser.exit()
 
     def create_bucket(self):
-        self.parser.add_argument('--name', required=False)
-        self.parser.add_argument('--storage-class', required=False)
-        parsed_args = self.parser.parse_known_args()[0]
+        subparser = self.subparsers.add_parser('create-bucket')
+        subparser.add_argument('--name', required=False)
+        subparser.add_argument('--storage-class', required=False)
+        parsed_args = subparser.parse_known_args()[0]
 
         name = parsed_args.name or utils.get_random_name()
         bucket = self.driver.create_bucket(
@@ -43,27 +48,31 @@ class Controller:
         return bucket
 
     def delete_bucket(self):
-        self.parser.add_argument('bucket_id')
-        parsed_args = self.parser.parse_known_args()[0]
+        subparser = self.subparsers.add_parser('delete-bucket')
+        subparser.add_argument('bucket_id')
+        parsed_args = subparser.parse_known_args()[0]
 
         self.driver.delete_bucket(
             bucket_id=parsed_args.bucket_id,
         )
 
     def list_buckets(self):
+        subparser = self.subparsers.add_parser('list-buckets')
+        parsed_args = subparser.parse_known_args()[0]
         buckets = self.driver.list_buckets()
         for bucket in buckets:
             print(bucket['id'])
 
     def upload(self):
-        self.parser.add_argument('--bucket-id')
-        self.parser.add_argument('--storage-class', required=False)
-        self.parser.add_argument('--name', required=False)
-        content_group = self.parser.add_mutually_exclusive_group()
+        subparser = self.subparsers.add_parser('upload')
+        subparser.add_argument('--bucket-id')
+        subparser.add_argument('--storage-class', required=False)
+        subparser.add_argument('--name', required=False)
+        content_group = subparser.add_mutually_exclusive_group()
         content_group.add_argument('--content', type=argparse.FileType('r'), required=False)
         content_group.add_argument('--content-size', type=int, required=False)
         content_group.add_argument('--', '--from-stdin', default=False, action='store_true', dest='from_stdin')
-        parsed_args = self.parser.parse_known_args()[0]
+        parsed_args = subparser.parse_known_args()[0]
 
         name = parsed_args.name or utils.get_random_name()
         if parsed_args.from_stdin:
@@ -85,8 +94,9 @@ class Controller:
         return obj
 
     def list_objects(self):
-        self.parser.add_argument('bucket_id')
-        parsed_args = self.parser.parse_known_args()[0]
+        subparser = self.subparsers.add_parser('list-objects')
+        subparser.add_argument('bucket_id')
+        parsed_args = subparser.parse_known_args()[0]
 
         objects = self.driver.list_objects(
             bucket_id=parsed_args.bucket_id,
@@ -95,9 +105,10 @@ class Controller:
             print(obj)
 
     def delete_object(self):
-        self.parser.add_argument('bucket_id')
-        self.parser.add_argument('name')
-        parsed_args = self.parser.parse_known_args()[0]
+        subparser = self.subparsers.add_parser('delete-object')
+        subparser.add_argument('bucket_id')
+        subparser.add_argument('name')
+        parsed_args = subparser.parse_known_args()[0]
 
         self.driver.delete_object(
             bucket_id=parsed_args.bucket_id,
@@ -105,8 +116,9 @@ class Controller:
         )
 
     def clean_bucket(self):
-        self.parser.add_argument('bucket_id')
-        parsed_args = self.parser.parse_known_args()[0]
+        subparser = self.subparsers.add_parser('clean-bucket')
+        subparser.add_argument('bucket_id')
+        parsed_args = subparser.parse_known_args()[0]
 
         if not parsed_args.noinput:
             print("You are going to clean entirely this bucket.")
@@ -116,6 +128,8 @@ class Controller:
         )
 
     def clean(self):
+        subparser = self.subparsers.add_parser('clean')
+        parsed_args = subparser.parse_known_args()[0]
         parsed_args = self.parser.parse_known_args()[0]
         if not parsed_args.noinput:
             print("You are going to clean entirely this object storage.")
@@ -123,10 +137,11 @@ class Controller:
         self.driver.clean()
 
     def time_upload(self):
-        self.parser.add_argument('--storage-class', required=False)
-        self.parser.add_argument('--object-size', type=int, required=False)
-        self.parser.add_argument('--object-number', type=int, required=False)
-        parsed_args = self.parser.parse_known_args()[0]
+        subparser = self.subparsers.add_parser('time-upload')
+        subparser.add_argument('--storage-class', required=False)
+        subparser.add_argument('--object-size', type=int, required=False)
+        subparser.add_argument('--object-number', type=int, required=False)
+        parsed_args = subparser.parse_known_args()[0]
 
         benchmark = benchmarks.UploadBenchmark(self.driver)
         benchmark.set_params(
@@ -142,10 +157,11 @@ class Controller:
             print('%s\t\t%s' % item)
 
     def time_download(self):
-        self.parser.add_argument('--storage-class', required=False)
-        self.parser.add_argument('--object-size', type=int, required=False)
-        self.parser.add_argument('--object-number', type=int, required=False)
-        parsed_args = self.parser.parse_known_args()[0]
+        subparser = self.subparsers.add_parser('time-download')
+        subparser.add_argument('--storage-class', required=False)
+        subparser.add_argument('--object-size', type=int, required=False)
+        subparser.add_argument('--object-number', type=int, required=False)
+        parsed_args = subparser.parse_known_args()[0]
 
         benchmark = benchmarks.DownloadBenchmark(self.driver)
         benchmark.set_params(
@@ -163,8 +179,10 @@ class Controller:
 
 def main():
     """Entry function"""
-    parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=ACTIONS)
+    parser = argparse.ArgumentParser(
+        prog='os-benchmark',
+        add_help=False,
+    )
     parser.add_argument(
         '--config-file',
         required=False,
@@ -173,7 +191,7 @@ def main():
     parser.add_argument(
         '--config-raw',
         required=False,
-        help="Provide a raw configuration as JSON insteadd of a stored file.",
+        help="Provide a raw configuration as JSON instead of a stored file.",
     )
     parser.add_argument(
         '--config-name',
@@ -182,15 +200,23 @@ def main():
     )
     parser.add_argument(
         '-v', '--verbosity',
-        default=1, required=False,
-        help="Verbosity level; 0=minimal output, 1=normal output 2=verbose output, 3=very verbose output",
+        default=0, required=False, type=int,
+        choices=(0, 1, 2),
+        help="Verbosity level; 0=minimal output, 1=normal output 2=verbose output",
     )
     parser.add_argument(
         '-i', '--noinput',
         default=False, action='store_true',
         help="Disable any prompt",
     )
+    parser.add_argument('action', choices=ACTIONS)
     parsed_args = parser.parse_known_args()[0]
+    # Logs
+    verbosity = 30 - (parsed_args.verbosity * 10)
+    logger = logging.getLogger('osb')
+    console_handler = logging.StreamHandler()
+    logger.addHandler(console_handler)
+    logger.setLevel(verbosity)
     # Get config
     if parsed_args.config_raw:
         config = json.loads(parsed_args.config_raw)

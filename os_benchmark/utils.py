@@ -19,7 +19,7 @@ def get_config_file(config_file=None):
     elif config_file is not None:
         files = [config_file]
     else:
-        files = ['/etc/osb.yml', '~/.osb.yml']
+        files = ['~/.osb.yml', '/etc/osb.yml']
 
     for filename in files:
         filename = os.path.expanduser(filename)
