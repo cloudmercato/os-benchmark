@@ -64,4 +64,24 @@ Command line
     -v {0,1,2}, --verbosity {0,1,2}
                         Verbosity level; 0=minimal output, 1=normal output
                         2=verbose output
-    -i, --noinput         Disable any prompt
+    -i, --noinput       Disable any prompt
+    
+Test upload file
+~~~~~~~~~~~~~~~~
+
+::
+
+  $ os-benchmark time-upload --object-size 1 --object-number 5
+  version         0.1
+  operation       upload
+  ops             5
+  time            2.701468
+  rate            1.850845
+  bw              0.000002
+  object_size     1
+  total_size      5
+  avg             0.539478
+  stddev          0.126987
+  med             0.537267
+  min             0.415063
+  max             0.744637
