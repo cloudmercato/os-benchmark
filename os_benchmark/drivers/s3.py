@@ -35,6 +35,7 @@ class Driver(base.BaseDriver, base.RequestsMixin):
             code = err.response['Error']['Code']
             msg = err.response['Error']['Message']
             if code == 'NoSuchBucket':
+                self.logger.debug(err)
                 return
             if code == 'BucketNotEmpty':
                 raise errors.DriverNonEmptyBucketError(msg)
@@ -43,11 +44,14 @@ class Driver(base.BaseDriver, base.RequestsMixin):
     def list_objects(self, bucket_id, **kwargs):
         bucket = self.s3.Bucket(bucket_id)
         try:
-            objects = bucket.objects.all()
+            objects = [o.key for o in bucket.objects.all()]
         except botocore.exceptions.ClientError as err:
             code = err.response['Error']['Code']
+            msg = err.response['Error']['Message']
+            if code == 'NoSuchBucket':
+                raise errors.DriverBucketUnfoundError(msg)
             raise
-        return [o.key for o in objects]
+        return objects
 
     def upload(self, bucket_id, name, content, acl='public-read', **kwargs):
         extra = {'ACL': acl}

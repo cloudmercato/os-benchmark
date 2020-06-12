@@ -16,3 +16,11 @@ class DriverConfigError(DriverError):
 
 class DriverNonEmptyBucketError(DriverError):
     """Driver non-empty bucket error"""
+
+
+class DriverBucketUnfoundError(DriverError):
+    """Driver bucket unfound error"""
+
+
+class DriverObjectUnfoundError(DriverError):
+    """Driver object unfound error"""

@@ -3,6 +3,7 @@ Base Driver class module.
 """
 import logging
 import requests
+from os_benchmark.drivers import errors
 
 
 class BaseDriver:
@@ -52,7 +53,12 @@ class BaseDriver:
 
     def clean_bucket(self, bucket_id, delete_bucket=True):
         """Delete all object from a bucket"""
-        for obj in self.list_objects(bucket_id=bucket_id):
+        try:
+            objects = self.list_objects(bucket_id=bucket_id)
+        except errors.DriverBucketUnfoundError as err:
+            self.logger.debug(err)
+            return
+        for obj in objects:
             self.delete_object(bucket_id=bucket_id, name=obj)
         if delete_bucket:
             self.delete_bucket(bucket_id=bucket_id)
