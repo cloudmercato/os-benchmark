@@ -27,6 +27,7 @@ Configuration
 ~~~~~~~~~~~~~
 
 You need to specify a YAML config file such as following: ::
+
   ---
   my_exoscale:                                  # Configuration ID
       driver: exoscale                          # Driver key
@@ -34,11 +35,33 @@ You need to specify a YAML config file such as following: ::
       aws_secret_access_key: mysecrect
       endpoint_url: https://sos-ch-dk-2.exo.io
   
-In command line, `--config-file` and `--config-raw` can be used to make the
-choice, else `~/.osb.yml`, then `/etc/osb.yml` will be used.
+In command line, ``--config-file`` and ``--config-raw`` can be used to make the
+choice, else ``~/.osb.yml``, then ``/etc/osb.yml`` will be used.
 
 Command line
 ~~~~~~~~~~~~
 
 ::
+
   os-benchmark --help
+  usage: os-benchmark [--config-file CONFIG_FILE] [--config-raw CONFIG_RAW]
+                    [--config-name CONFIG_NAME] [-v {0,1,2}] [-i]
+                    {help,create-bucket,list-buckets,delete-bucket,list-objects,upload,delete-object,clean-bucket,clean,time-upload,time-download}
+                    ...
+
+  positional arguments:
+    {help,create-bucket,list-buckets,delete-bucket,list-objects,upload,delete-object,clean-bucket,clean,time-upload,time-download}
+                        Sub-command
+
+  optional arguments:
+    --config-file CONFIG_FILE
+                        Specify a configuration file to use.
+    --config-raw CONFIG_RAW
+                        Provide a raw configuration as JSON instead of a
+                        stored file.
+    --config-name CONFIG_NAME
+                        Select a driver configuration to use.
+    -v {0,1,2}, --verbosity {0,1,2}
+                        Verbosity level; 0=minimal output, 1=normal output
+                        2=verbose output
+    -i, --noinput         Disable any prompt
