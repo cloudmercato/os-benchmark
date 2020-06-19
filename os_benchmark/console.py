@@ -68,8 +68,9 @@ class Controller:
         for action in ACTIONS:
             action_subparsers[action] = self.subparsers.add_parser(action)
         self.main_args = self.parser.parse_known_args()[0]
-        self.subparser = action_subparsers[self.main_args.action]
-        self.action = self.main_args.action.replace('-', '_')
+        main_action = self.main_args.action or 'help'
+        self.subparser = action_subparsers[main_action]
+        self.action = main_action.replace('-', '_')
         # Logs
         verbosity = 30 - (self.main_args.verbosity * 10)
         self.logger = logging.getLogger('osb')
@@ -80,10 +81,14 @@ class Controller:
         if self.main_args.config_raw:
             config = json.loads(self.main_args.config_raw)
         else:
-            config = utils.get_driver_config(
-                config_name=self.main_args.config_name,
-                config_file=self.main_args.config_file,
-            )
+            try:
+                config = utils.get_driver_config(
+                    config_name=self.main_args.config_name,
+                    config_file=self.main_args.config_file,
+                )
+            except errors.ConfigurationError as err:
+                print(err)
+                self.help()
         # Get driver
         self.driver = utils.get_driver(config)
 

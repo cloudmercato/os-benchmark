@@ -1,9 +1,12 @@
 import os
 import logging
 import time
+
 import yaml
 from faker import Faker
 import randomio
+
+from os_benchmark import errors
 from os_benchmark.drivers import utils as driver_utils
 
 logger = logging.getLogger('osb.utils')
@@ -47,9 +50,15 @@ def get_driver_config(config_name=None, config_file=None):
         config_name = list(configs.keys())[0]
         logger.debug("Use the single driver config '%s'", config_name)
 
-    if config_name not in configs:
+    if config_name and config_name not in configs:
         msg = "'%s' config found." % config_name
-        raise Exception(msg)
+        raise errors.ConfigurationError(msg)
+
+    if config_name is None:
+        msg = 'Unknown configuration, please specify one in %s' % (
+            ', '.join([c for c in configs])
+        )
+        raise errors.ConfigurationError(msg)
 
     return configs[config_name]
 

@@ -1,8 +1,8 @@
 """Driver errors module."""
-from os_benchmark import errors
+from os_benchmark import errors as base
 
 
-class DriverError(errors.OsbError):
+class DriverError(base.OsbError):
     """Base Driver error"""
 
 

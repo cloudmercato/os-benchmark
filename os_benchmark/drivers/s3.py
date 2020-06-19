@@ -1,10 +1,12 @@
-import requests
+"""
+Base S3 driver allowing benchmark of any S3-based storage.
+"""
 import boto3
 import botocore
 from os_benchmark.drivers import base, errors
 
 
-class Driver(base.BaseDriver, base.RequestsMixin):
+class Driver(base.RequestsMixin, base.BaseDriver):
     @property
     def s3(self):
         if not hasattr(self, '_s3'):
@@ -27,7 +29,7 @@ class Driver(base.BaseDriver, base.RequestsMixin):
         bucket = self.s3.create_bucket(**params)
         return {'id': name}
 
-    def delete_bucket(self, bucket_id):
+    def delete_bucket(self, bucket_id, **kwargs):
         bucket = self.s3.Bucket(bucket_id)
         try:
             bucket.delete()
@@ -62,11 +64,6 @@ class Driver(base.BaseDriver, base.RequestsMixin):
             extra,
         )
         return {'name': name}
-
-    def download(self, url, block_size=65536, **kwargs):
-        with self.session.get(url, stream=True) as response:
-            for chunk in response.iter_content(chunk_size=block_size):
-                pass
 
     def delete_object(self, bucket_id, name, **kwargs):
         obj = self.s3.Object(bucket_id, name)

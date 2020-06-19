@@ -72,8 +72,18 @@ class BaseDriver:
 
 class RequestsMixin:
     """Mixin providing a HTTTP Session"""
+    session_headers = {}
+
     @property
     def session(self):
         if not hasattr(self, '_session'):
             self._session = requests.Session()
+            self._session.headers = self.session_headers.copy()
         return self._session
+
+    def download(self, url, block_size=65536, **kwargs):
+        with self.session.get(url, stream=True) as response:
+            if response.status_code != 200:
+                raise errors.base.InvalidHttpCode(response.content)
+            for chunk in response.iter_content(chunk_size=block_size):
+                pass

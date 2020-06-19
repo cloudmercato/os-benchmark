@@ -1,4 +1,7 @@
-"""Exoscale S3 Driver"""
+"""
+.. warning
+  This driver requires boto3.
+"""
 from os_benchmark.drivers import s3
 
 

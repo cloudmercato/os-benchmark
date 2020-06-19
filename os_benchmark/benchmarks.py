@@ -69,14 +69,16 @@ class UploadBenchmark(BaseBenchmark):
         count = len(self.timings)
         size = self.params['object_size']
         total_size = count * size
+        test_time = sum(self.timings)
         stats = {
             'operation': 'upload',
             'ops': count,
             'time': self.total_time,
-            'rate': (count/self.total_time),
-            'bw': (total_size/self.total_time/2**20),
+            'rate': (count/test_time),
+            'bw': (total_size/test_time/2**20),
             'object_size': size,
-            'total_size': total_size
+            'total_size': total_size,
+            'test_time': test_time,
         }
         if count > 1:
             stats.update({
@@ -137,14 +139,16 @@ class DownloadBenchmark(BaseBenchmark):
         count = len(self.timings)
         size = self.params['object_size']
         total_size = count * size
+        test_time = sum(self.timings)
         stats = {
             'operation': 'download',
             'ops': count,
             'time': self.total_time,
-            'rate': (count/self.total_time),
-            'bw': (total_size/self.total_time/2**20),
+            'rate': (count/test_time),
+            'bw': (total_size/test_time/2**20),
             'object_size': size,
-            'total_size': total_size
+            'total_size': total_size,
+            'test_time': test_time,
         }
         if count > 1:
             stats.update({
