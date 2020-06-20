@@ -24,6 +24,7 @@ def get_config_file(config_file=None):
     else:
         files = ['~/.osb.yml', '/etc/osb.yml']
 
+    configs = None
     for filename in files:
         filename = os.path.expanduser(filename)
         try:
@@ -35,8 +36,8 @@ def get_config_file(config_file=None):
 
     logger.info("Use config file '%s'", filename)
     if not configs:
-        msg = "No config found."
-        raise Exception(msg)
+        msg = "No configuration file found."
+        raise errors.ConfigurationError(msg)
     return configs
 
 
@@ -74,7 +75,10 @@ def get_driver(config):
 
 def get_random_name(size=30):
     """Creates a random name"""
-    return (faker.user_name()+faker.user_name())[:size]
+    name = faker.user_name()
+    while len(name) < size:
+        name += faker.user_name()
+    return name[:size]
 
 
 def get_random_content(size):
