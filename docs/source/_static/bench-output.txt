@@ -1,0 +1,14 @@
+version         0.1
+operation               download
+ops             50
+time            0.001370
+rate            101458.732463
+bw              99.080793
+object_size             1024
+total_size              51200
+test_time               0.000493
+avg             0.000010
+stddev          0.000001
+med             0.000010
+min             0.000009
+max             0.000013
