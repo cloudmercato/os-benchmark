@@ -1,6 +1,15 @@
 Object Storage Benchmark
 ========================
 
+.. image:: https://badge.fury.io/py/os-benchmark.svg
+   :target: https://badge.fury.io/py/os-benchmark
+
+.. image:: https://travis-ci.org/cloudmercato/os-benchmark.svg?branch=master
+   :target: https://travis-ci.org/cloudmercato/os-benchmark
+
+.. image:: https://coveralls.io/repos/github/cloudmercato/os-benchmark/badge.svg?branch=master
+   :target: https://coveralls.io/github/cloudmercato/os-benchmark?branch=master
+
 **OS-Benchmark** is a simple tool to measure object storage operations.
 
 Features
