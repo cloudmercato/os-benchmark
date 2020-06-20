@@ -1,3 +1,26 @@
+"""
+.. note::
+  This driver requires `python-swiftclient`_.
+
+Base `Openstack Swift`_ driver allowing usage of any Swift-based storage.
+
+Configuration
+~~~~~~~~~~~~~
+
+.. code-block:: yaml
+
+  ---
+  swift_connection:
+    driver: swift
+    user: <your_username>
+    key: <your_password>
+    authurl: <auth_url>
+
+All parameters except ``driver`` will be passed to ``swiftclient.Connection``.
+
+.. _python-swiftclient: https://github.com/openstack/python-swiftclient
+.. _`Openstack Swift`: https://github.com/openstack/swift
+"""
 import swiftclient
 from os_benchmark.drivers import base, errors
 

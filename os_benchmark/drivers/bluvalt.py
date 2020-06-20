@@ -1,3 +1,25 @@
+"""
+.. note::
+  This driver requires `python-swiftclient`_.
+
+`Object Storage`_ from `bluvalt`_.
+
+Configuration
+~~~~~~~~~~~~~
+
+.. code-block:: yaml
+
+  ---
+  bluvalt:
+    driver: bluvalt
+    user: <your_tenant_id>:<your_username>
+    key: <your_password>
+
+.. _python-swiftclient: https://github.com/openstack/python-swiftclient
+.. _`Object Storage`: https://cloud.bluvalt.com/#/application-marketplace/958/object-storage-958/1
+.. _bluvalt: https://bluvalt.com/
+"""
+
 from os_benchmark.drivers import swift
 
 

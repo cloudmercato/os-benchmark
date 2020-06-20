@@ -1,5 +1,15 @@
 """
-Filiesystem browser, more here for testing purppose than benchmark.
+Filesystem driver storing buckets in file-system with true directories.
+
+Configuration
+~~~~~~~~~~~~~
+
+.. code-block:: yaml
+
+  ---
+  myFsrofile:
+    driver: fs
+    path: /tmp/osn/
 """
 import os
 import shutil

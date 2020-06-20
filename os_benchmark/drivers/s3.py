@@ -1,5 +1,22 @@
 """
-Base S3 driver allowing benchmark of any S3-based storage.
+.. note::
+  This driver requires `boto3`_.
+
+Base S3 driver allowing usage of any S3-based storage.
+
+Configuration
+~~~~~~~~~~~~~
+
+.. code-block:: yaml
+
+  ---
+  s3:
+    driver: s2
+    aws_access_key_id: <your_ak>
+    aws_secret_access_key: <your_sk>
+    region: eu-west-1
+
+All parameters except ``driver`` will be passed to ``boto3.resource``.
 """
 import boto3
 import botocore
