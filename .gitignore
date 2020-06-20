@@ -4,3 +4,5 @@ os_benchmark.egg-info/
 *.sw[pon]
 dist/
 build
+.eggs
+.tox
