@@ -2,6 +2,8 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath('.'))))
 
+master_doc = 'index'
+
 project = 'Object Storage Benchmark'
 copyright = '2020, Cloud Mercato'
 author = 'Anthony Monthe'

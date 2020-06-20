@@ -10,6 +10,10 @@ Object Storage Benchmark
 .. image:: https://coveralls.io/repos/github/cloudmercato/os-benchmark/badge.svg?branch=master
    :target: https://coveralls.io/github/cloudmercato/os-benchmark?branch=master
 
+.. image:: https://readthedocs.org/projects/object-storage-benchmark/badge/?version=latest
+   :target: https://object-storage-benchmark.readthedocs.io/?badge=latest
+   :alt: Documentation Status
+
 **OS-Benchmark** is a simple tool to measure object storage operations.
 
 Features
@@ -75,8 +79,8 @@ Command line
                         2=verbose output
     -i, --noinput       Disable any prompt
     
-Test upload file
-~~~~~~~~~~~~~~~~
+Test example: File uploading
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ::
 
@@ -94,3 +98,11 @@ Test upload file
   med             0.537267
   min             0.415063
   max             0.744637
+
+
+Contribute
+----------
+
+This project is created with ❤️ for free by `Cloud Mercato`_ under BSD License. Feel free to contribute by submitting a pull request or an issue.
+
+.. _`Cloud Mercato`: https://www.cloud-mercato.com/
