@@ -82,8 +82,10 @@ class RequestsMixin:
         return self._session
 
     def download(self, url, block_size=65536, **kwargs):
+        self.logger.debug('GET %s', url)
         with self.session.get(url, stream=True) as response:
             if response.status_code != 200:
-                raise errors.base.InvalidHttpCode(response.content)
+                msg = '%s %s' % (url, response.content)
+                raise errors.base.InvalidHttpCode(msg)
             for chunk in response.iter_content(chunk_size=block_size):
                 pass

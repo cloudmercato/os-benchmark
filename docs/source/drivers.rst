@@ -22,6 +22,12 @@ Exoscale
 .. automodule:: os_benchmark.drivers.exoscale
 
 
+Wasabi
+~~~~~~
+
+.. automodule:: os_benchmark.drivers.wasabi
+
+
 Generic
 -------
 

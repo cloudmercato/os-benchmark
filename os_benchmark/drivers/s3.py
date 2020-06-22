@@ -24,10 +24,14 @@ from os_benchmark.drivers import base, errors
 
 
 class Driver(base.RequestsMixin, base.BaseDriver):
+    default_kwargs = {}
+
     @property
     def s3(self):
         if not hasattr(self, '_s3'):
-            self._s3 = boto3.resource('s3', **self.kwargs)
+            kwargs = self.kwargs.copy()
+            kwargs.update(self.default_kwargs)
+            self._s3 = boto3.resource('s3', **kwargs)
         return self._s3
 
     def list_buckets(self, **kwargs):
