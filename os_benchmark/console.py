@@ -67,13 +67,13 @@ class Controller:
         action_subparsers = {}
         for action in ACTIONS:
             action_subparsers[action] = self.subparsers.add_parser(action)
-        self.main_args = self.parser.parse_known_args()[0]
+        self.main_args = self.parser.parse_known_args(sys.argv[1:3])[0]
         main_action = self.main_args.action or 'help'
         self.subparser = action_subparsers[main_action]
         self.action = main_action.replace('-', '_')
         # Logs
         verbosity = 30 - (self.main_args.verbosity * 10)
-        self.logger = logging.getLogger('osb')
+        self.logger = logging.getLogger('osb.driver')
         console_handler = logging.StreamHandler()
         self.logger.addHandler(console_handler)
         self.logger.setLevel(verbosity)
@@ -87,7 +87,7 @@ class Controller:
                     config_file=self.main_args.config_file,
                 )
             except errors.ConfigurationError as err:
-                print(err)
+                self.logger.error(err)
                 self.help()
         # Get driver
         self.driver = utils.get_driver(config)
@@ -111,7 +111,6 @@ class Controller:
             name=name,
             storage_class=parsed_args.storage_class,
         )
-        print(bucket)
         return bucket
 
     def delete_bucket(self):
