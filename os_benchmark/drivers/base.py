@@ -3,6 +3,8 @@ Base Driver class module.
 """
 import logging
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 from os_benchmark.drivers import errors
 
 
@@ -79,6 +81,10 @@ class RequestsMixin:
         if not hasattr(self, '_session'):
             self._session = requests.Session()
             self._session.headers = self.session_headers.copy()
+            retry = Retry(total=0)
+            adapter = HTTPAdapter(max_retries=retry)
+            self._session.mount('http://', adapter)
+            self._session.mount('https://', adapter)
         return self._session
 
     def download(self, url, block_size=65536, **kwargs):
@@ -86,6 +92,6 @@ class RequestsMixin:
         with self.session.get(url, stream=True) as response:
             if response.status_code != 200:
                 msg = '%s %s' % (url, response.content)
-                raise errors.base.InvalidHttpCode(msg)
+                raise errors.base.InvalidHttpCode(msg, response.status_code)
             for chunk in response.iter_content(chunk_size=block_size):
                 pass

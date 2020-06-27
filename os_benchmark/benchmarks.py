@@ -1,7 +1,7 @@
 """Benchmark modules"""
 import logging
 import statistics
-from os_benchmark import utils
+from os_benchmark import utils, errors
 
 
 class BaseBenchmark:
@@ -96,6 +96,7 @@ class DownloadBenchmark(BaseBenchmark):
 
     def setup(self):
         self.timings = []
+        self.errors = []
         self.objects = []
         bucket_name = utils.get_random_name()
         self.logger.debug("Creating bucket '%s'", bucket_name)
@@ -123,12 +124,14 @@ class DownloadBenchmark(BaseBenchmark):
     def run(self, **kwargs):
         def download_objets(urls):
             for url in urls:
-                self.driver.download(url)
-                elapsed = utils.timeit(
-                    self.driver.download,
-                    url=url,
-                )[0]
-                self.timings.append(elapsed)
+                try:
+                    elapsed = utils.timeit(
+                        self.driver.download,
+                        url=url,
+                    )[0]
+                    self.timings.append(elapsed)
+                except errors.InvalidHttpCode as err:
+                    self.errors.append(err)
 
         self.total_time = utils.timeit(download_objets, urls=self.urls)[0]
 
@@ -137,6 +140,7 @@ class DownloadBenchmark(BaseBenchmark):
 
     def make_stats(self):
         count = len(self.timings)
+        error_count = len(self.errors)
         size = self.params['object_size']
         total_size = count * size
         test_time = sum(self.timings)
@@ -144,18 +148,25 @@ class DownloadBenchmark(BaseBenchmark):
             'operation': 'download',
             'ops': count,
             'time': self.total_time,
-            'rate': (count/test_time),
-            'bw': (total_size/test_time/2**20),
             'object_size': size,
             'total_size': total_size,
             'test_time': test_time,
+            'errors': error_count,
         }
         if count > 1:
             stats.update({
+                'rate': (count/test_time),
+                'bw': (total_size/test_time/2**20),
                 'avg': statistics.mean(self.timings),
                 'stddev': statistics.stdev(self.timings),
                 'med': statistics.median(self.timings),
                 'min': min(self.timings),
                 'max': max(self.timings),
             })
+        if error_count:
+            error_codes = set([e for e in self.errors])
+            stats.update({'error_count_%s' % e.args[1]: 0 for e in self.errors})
+            for err in self.errors:
+                key = 'error_count_%s' % err.args[1]
+                stats[key] += 1
         return stats

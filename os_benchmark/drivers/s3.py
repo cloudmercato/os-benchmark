@@ -47,6 +47,8 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         try:
             raw_buckets = self.s3.buckets.all()
             buckets = [{'id': b.name} for b in raw_buckets]
+        except botocore.exceptions.EndpointConnectionError as err:
+            raise errors.DriverConnectionError(err)
         except botocore.exceptions.ClientError as err:
             code = err.response['Error']['Code']
             msg = err.response['Error']['Message']

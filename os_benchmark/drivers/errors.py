@@ -6,7 +6,7 @@ class DriverError(base.OsbError):
     """Base Driver error"""
 
 
-class DriverConnecionError(DriverError):
+class DriverConnectionError(DriverError):
     """Driver connection error"""
 
 
