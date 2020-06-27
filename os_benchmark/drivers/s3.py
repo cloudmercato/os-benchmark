@@ -31,15 +31,29 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         if not hasattr(self, '_s3'):
             kwargs = self.kwargs.copy()
             kwargs.update(self.default_kwargs)
+            kwargs.update(self.get_custom_kwargs(kwargs))
+            config = kwargs.pop('config', None)
+            if config is not None:
+                kwargs['config'] = botocore.client.Config(**config)
+            # TODO: Remove sensitive data
+            # self.logger.debug("S3 config: %s", kwargs)
             self._s3 = boto3.resource('s3', **kwargs)
         return self._s3
 
+    def get_custom_kwargs(self, kwargs):
+        return kwargs
+
     def list_buckets(self, **kwargs):
-        raw_buckets = self.s3.buckets.all()
-        buckets = [
-            {'id': b.name}
-            for b in raw_buckets
-        ]
+        try:
+            raw_buckets = self.s3.buckets.all()
+            buckets = [{'id': b.name} for b in raw_buckets]
+        except botocore.exceptions.ClientError as err:
+            code = err.response['Error']['Code']
+            msg = err.response['Error']['Message']
+            if code == 'InvalidAccessKeyId':
+                msg += " (endpoint: %s)" % self.endpoint_url
+                raise errors.DriverAuthenticationError(msg)
+            raise
         return buckets
 
     def create_bucket(self, name, acl='public-read', **kwargs):
@@ -62,6 +76,9 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                 return
             if code == 'BucketNotEmpty':
                 raise errors.DriverNonEmptyBucketError(msg)
+            if code == 'InvalidAccessKeyId':
+                msg += " (endpoint: %s)" % self.endpoint_url
+                raise errors.DriverAuthenticationError(msg)
             raise
 
     def list_objects(self, bucket_id, **kwargs):
@@ -73,6 +90,9 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             msg = err.response['Error']['Message']
             if code == 'NoSuchBucket':
                 raise errors.DriverBucketUnfoundError(msg)
+            if code == 'InvalidAccessKeyId':
+                msg += " (endpoint: %s)" % self.endpoint_url
+                raise errors.DriverAuthenticationError(msg)
             raise
         return objects
 

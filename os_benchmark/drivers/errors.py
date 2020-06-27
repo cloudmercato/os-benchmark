@@ -10,6 +10,10 @@ class DriverConnecionError(DriverError):
     """Driver connection error"""
 
 
+class DriverAuthenticationError(DriverError):
+    """Driver authentication error"""
+
+
 class DriverConfigError(DriverError):
     """Driver configuration error"""
 

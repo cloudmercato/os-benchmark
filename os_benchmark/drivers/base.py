@@ -10,7 +10,7 @@ class BaseDriver:
     """Base Driver class"""
     def __init__(self, **kwargs):
         self.kwargs = self._validate_kwargs(kwargs)
-        self.logger = logging.getLogger('osn.driver')
+        self.logger = logging.getLogger('osb.driver')
 
     def setup(self):
         """Initialiaze driver before benchmark"""
