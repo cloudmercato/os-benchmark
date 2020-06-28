@@ -23,6 +23,8 @@ ACTIONS = (
     'time-download',
 )
 
+logger = logging.getLogger('osb')
+
 def create_parser():
     """Create main parser"""
     parser = argparse.ArgumentParser(
@@ -45,10 +47,20 @@ def create_parser():
         help="Select a driver configuration to use."
     )
     parser.add_argument(
+        '-C', '--connect-timeout',
+        default=None, required=False, type=float,
+        help="The time in seconds till a timeout is considered during TCP connection.",
+    )
+    parser.add_argument(
+        '-R', '--read-timeout',
+        default=None, required=False, type=float,
+        help="The time in seconds till a timeout is considered durint HTTP read",
+    )
+    parser.add_argument(
         '-v', '--verbosity',
         default=0, required=False, type=int,
-        choices=(0, 1, 2),
-        help="Verbosity level; 0=minimal output, 1=normal output 2=verbose output",
+        choices=(0, 1, 2, 3),
+        help="Verbosity level; 0=minimal output, 1=normal output 2=verbose output 3=still more",
     )
     parser.add_argument(
         '-i', '--noinput',
@@ -65,18 +77,22 @@ class Controller:
         self.subparsers = self.parser.add_subparsers(help="Sub-command", dest='action')
 
         action_subparsers = {}
+        main_action = base_num_args = None
         for action in ACTIONS:
             action_subparsers[action] = self.subparsers.add_parser(action)
-        self.main_args = self.parser.parse_known_args(sys.argv[1:3])[0]
+            if action in sys.argv:
+                main_action = action
+                base_num_args = sys.argv.index(action) + 1
+        self.main_args = self.parser.parse_known_args(sys.argv[1:base_num_args])[0]
         main_action = self.main_args.action or 'help'
         self.subparser = action_subparsers[main_action]
         self.action = main_action.replace('-', '_')
         # Logs
-        verbosity = 30 - (self.main_args.verbosity * 10)
-        self.logger = logging.getLogger('osb.driver')
+        self.verbosity = 30 - (self.main_args.verbosity * 10)
+        self.logger = logger
         console_handler = logging.StreamHandler()
         self.logger.addHandler(console_handler)
-        self.logger.setLevel(verbosity)
+        self.logger.setLevel(self.verbosity)
         # Get config
         if self.main_args.config_raw:
             config = json.loads(self.main_args.config_raw)
@@ -89,6 +105,8 @@ class Controller:
             except errors.ConfigurationError as err:
                 self.logger.error(err)
                 self.help()
+        config['read_timeout'] = self.main_args.read_timeout
+        config['connect_timeout'] = self.main_args.connect_timeout
         # Get driver
         self.driver = utils.get_driver(config)
 
@@ -132,7 +150,7 @@ class Controller:
         self.subparser.add_argument('--storage-class', required=False)
         self.subparser.add_argument('--name', required=False)
         content_group = self.subparser.add_mutually_exclusive_group()
-        content_group.add_argument('--content', type=argparse.FileType('r'), required=False)
+        content_group.add_argument('--content', type=argparse.FileType('rb'), required=False)
         content_group.add_argument('--content-size', type=int, required=False)
         content_group.add_argument('--', '--from-stdin', default=False, action='store_true', dest='from_stdin')
         parsed_args = self.parser.parse_known_args()[0]
@@ -141,7 +159,7 @@ class Controller:
         if parsed_args.from_stdin:
             content = sys.stdin
         elif parsed_args.content is not None:
-            content = open(parsed_args.content)
+            content = parsed_args.content
         elif parsed_args.content_size:
             content = utils.get_random_content(parsed_args.content_size)
         else:
@@ -185,7 +203,7 @@ class Controller:
 
         if not self.main_args.noinput:
             print("You are going to clean entirely this bucket.")
-            input("Press [ENTER] to continue")
+            input("Press [ENTER] to continue\n")
         self.driver.clean_bucket(
             bucket_id=parsed_args.bucket_id,
         )
@@ -195,7 +213,7 @@ class Controller:
 
         if not self.main_args.noinput:
             print("You are going to clean entirely this object storage.")
-            input("Press [ENTER] to continue")
+            input("Press [ENTER] to continue\n")
         self.driver.clean()
 
     def time_upload(self):
@@ -247,15 +265,19 @@ class Controller:
 
 def main():
     """Entry function"""
-    # Run
-    controller = Controller()
-    controller.run()
+    try:
+        controller = Controller()
+        controller.run()
+    except KeyboardInterrupt:
+        print("Stopped by user")
+        sys.exit(2)
+    except errors.OsbError as err:
+        if logger.level <= 0:
+            raise
+        logger.error(err)
+        sys.exit(1)
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except errors.OsbError as err:
-        print(err.args[0])
-        sys.exit(1)
+    main()
     sys.exit(0)

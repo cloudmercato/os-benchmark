@@ -18,13 +18,49 @@ Configuration
 
 All parameters except ``driver`` will be passed to ``boto3.resource``.
 """
+from functools import wraps
 import boto3
 import botocore
 from os_benchmark.drivers import base, errors
 
 
+def handle_request(method):
+    @wraps(method)
+    def _handle_request(self, *args, **kwargs):
+        try:
+            return method(self, *args, **kwargs)
+        except botocore.exceptions.ConnectionClosedError as err:
+            raise errors.DriverConnectionError(err)
+        except botocore.exceptions.EndpointConnectionError as err:
+            raise errors.DriverConnectionError(err)
+        except botocore.exceptions.ReadTimeoutError as err:
+            raise errors.DriverConnectionError(err)
+        except botocore.exceptions.ClientError as err:
+            code = err.response['Error']['Code']
+            msg = err.response['Error']['Message']
+            if code == '504':
+                raise errors.DriverConnectionError(err)
+            if code == 'ServiceUnavailable':
+                raise errors.DriverConnectionError(err)
+            if code == 'InvalidAccessKeyId':
+                msg += " (endpoint: %s)" % self.endpoint_url
+                raise errors.DriverAuthenticationError(msg)
+            raise
+    return _handle_request
+
+
 class Driver(base.RequestsMixin, base.BaseDriver):
     default_kwargs = {}
+    default_config = {}
+    _default_config = {
+        'user_agent': base.USER_AGENT,
+        'retries': {'max_attempts': 0},
+        'connect_timeout': 3,
+        'read_timeout': 1,
+        'parameter_validation': False,
+        # 'max_pool_connections': self.num_thread,
+        # 'proxies': proxies,
+    }
 
     @property
     def s3(self):
@@ -32,32 +68,30 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             kwargs = self.kwargs.copy()
             kwargs.update(self.default_kwargs)
             kwargs.update(self.get_custom_kwargs(kwargs))
-            config = kwargs.pop('config', None)
-            if config is not None:
-                kwargs['config'] = botocore.client.Config(**config)
-            # TODO: Remove sensitive data
-            # self.logger.debug("S3 config: %s", kwargs)
+
+            config = self._default_config.copy()
+            config.update(self.default_config)
+            config.update(kwargs.pop('config', None) or {})
+            if self.read_timeout is not None:
+                config['read_timeout'] = self.read_timeout
+            if self.connect_timeout is not None:
+                config['connect_timeout'] = self.connect_timeout
+            self.logger.debug("boto Config: %s", config)
+            kwargs['config'] = botocore.client.Config(**config)
+
             self._s3 = boto3.resource('s3', **kwargs)
         return self._s3
 
     def get_custom_kwargs(self, kwargs):
         return kwargs
 
+    @handle_request
     def list_buckets(self, **kwargs):
-        try:
-            raw_buckets = self.s3.buckets.all()
-            buckets = [{'id': b.name} for b in raw_buckets]
-        except botocore.exceptions.EndpointConnectionError as err:
-            raise errors.DriverConnectionError(err)
-        except botocore.exceptions.ClientError as err:
-            code = err.response['Error']['Code']
-            msg = err.response['Error']['Message']
-            if code == 'InvalidAccessKeyId':
-                msg += " (endpoint: %s)" % self.endpoint_url
-                raise errors.DriverAuthenticationError(msg)
-            raise
+        raw_buckets = self.s3.buckets.all()
+        buckets = [{'id': b.name} for b in raw_buckets]
         return buckets
 
+    @handle_request
     def create_bucket(self, name, acl='public-read', **kwargs):
         params = {
             'Bucket': name,
@@ -66,6 +100,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         bucket = self.s3.create_bucket(**params)
         return {'id': name}
 
+    @handle_request
     def delete_bucket(self, bucket_id, **kwargs):
         bucket = self.s3.Bucket(bucket_id)
         try:
@@ -78,11 +113,9 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                 return
             if code == 'BucketNotEmpty':
                 raise errors.DriverNonEmptyBucketError(msg)
-            if code == 'InvalidAccessKeyId':
-                msg += " (endpoint: %s)" % self.endpoint_url
-                raise errors.DriverAuthenticationError(msg)
             raise
 
+    @handle_request
     def list_objects(self, bucket_id, **kwargs):
         bucket = self.s3.Bucket(bucket_id)
         try:
@@ -92,22 +125,28 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             msg = err.response['Error']['Message']
             if code == 'NoSuchBucket':
                 raise errors.DriverBucketUnfoundError(msg)
-            if code == 'InvalidAccessKeyId':
-                msg += " (endpoint: %s)" % self.endpoint_url
-                raise errors.DriverAuthenticationError(msg)
             raise
         return objects
 
+    @handle_request
     def upload(self, bucket_id, name, content, acl='public-read', **kwargs):
         extra = {'ACL': acl}
-        self.s3.meta.client.upload_fileobj(
-            content,
-            bucket_id,
-            name,
-            extra,
-        )
+        try:
+            self.s3.meta.client.upload_fileobj(
+                content,
+                bucket_id,
+                name,
+                extra,
+            )
+        except botocore.exceptions.ClientError as err:
+            code = err.response['Error']['Code']
+            msg = err.response['Error']['Message']
+            if code == 'NoSuchBucket':
+                raise errors.DriverBucketUnfoundError(msg)
+            raise
         return {'name': name}
 
+    @handle_request
     def delete_object(self, bucket_id, name, **kwargs):
         obj = self.s3.Object(bucket_id, name)
         obj.delete()

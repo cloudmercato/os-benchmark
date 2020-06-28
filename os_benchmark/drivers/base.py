@@ -3,14 +3,21 @@ Base Driver class module.
 """
 import logging
 import requests
-from requests.adapters import HTTPAdapter
+from requests.adapters import HTTPAdapter as BaseHTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from os_benchmark.drivers import errors
+
+USER_AGENT = 'os-benchmark'
 
 
 class BaseDriver:
     """Base Driver class"""
-    def __init__(self, **kwargs):
+    read_timeout = None
+    connect_timeout = None
+
+    def __init__(self, read_timeout=None, connect_timeout=None, **kwargs):
+        self.read_timeout = read_timeout or self.read_timeout
+        self.connect_timeout = connect_timeout or self.connect_timeout
         self.kwargs = self._validate_kwargs(kwargs)
         self.logger = logging.getLogger('osb.driver')
 
@@ -56,21 +63,35 @@ class BaseDriver:
     def clean_bucket(self, bucket_id, delete_bucket=True):
         """Delete all object from a bucket"""
         try:
+            self.logger.debug("Listing all objects from %s", bucket_id)
             objects = self.list_objects(bucket_id=bucket_id)
         except errors.DriverBucketUnfoundError as err:
             self.logger.debug(err)
             return
         for obj in objects:
+            self.logger.info("Deleting object %s/%s", bucket_id, obj)
             self.delete_object(bucket_id=bucket_id, name=obj)
         if delete_bucket:
             self.delete_bucket(bucket_id=bucket_id)
 
     def clean(self):
         """Delete all buckets and all object"""
+        self.logger.debug("Listing all buckets")
         for bucket in self.list_buckets():
-            self.clean_bucket(bucket_id=bucket['id'])
-            self.delete_bucket(bucket_id=bucket['id'])
+            self.logger.info("Deleting bucket %s", bucket['id'])
+            self.clean_bucket(bucket_id=bucket['id'], delete_bucket=True)
 
+
+class HTTPAdapter(BaseHTTPAdapter):
+    def __init__(self, timeout=None, *args, **kwargs):
+        self.timeout = 3 if timeout is None else timeout
+        super().__init__(*args, **kwargs)
+
+    def send(self, request, **kwargs):
+        timeout = kwargs.get("timeout")
+        if timeout is None:
+            kwargs["timeout"] = self.timeout
+        return super().send(request, **kwargs)
 
 class RequestsMixin:
     """Mixin providing a HTTTP Session"""
@@ -82,7 +103,8 @@ class RequestsMixin:
             self._session = requests.Session()
             self._session.headers = self.session_headers.copy()
             retry = Retry(total=0)
-            adapter = HTTPAdapter(max_retries=retry)
+            timeout = (self.connect_timeout, self.read_timeout)
+            adapter = HTTPAdapter(max_retries=retry, timeout=timeout)
             self._session.mount('http://', adapter)
             self._session.mount('https://', adapter)
         return self._session

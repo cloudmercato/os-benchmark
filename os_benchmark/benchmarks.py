@@ -2,6 +2,7 @@
 import logging
 import statistics
 from os_benchmark import utils, errors
+from os_benchmark.drivers import errors as driver_errors
 
 
 class BaseBenchmark:
@@ -35,6 +36,7 @@ class UploadBenchmark(BaseBenchmark):
     def setup(self):
         self.timings = []
         self.objects = []
+        self.errors = []
         bucket_name = utils.get_random_name()
         self.storage_class = self.params.get('storage_class')
         self.logger.debug("Creating bucket '%s'", bucket_name)
@@ -50,15 +52,19 @@ class UploadBenchmark(BaseBenchmark):
                 content = utils.get_random_content(self.params['object_size'])
 
                 self.logger.debug("Uploading object '%s'", name)
-                elapsed, obj = utils.timeit(
-                    self.driver.upload,
-                    bucket_id=self.bucket['id'],
-                    storage_class=self.storage_class,
-                    name=name,
-                    content=content,
-                )
-                self.timings.append(elapsed)
-                self.objects.append(obj)
+                try:
+                    elapsed, obj = utils.timeit(
+                        self.driver.upload,
+                        bucket_id=self.bucket['id'],
+                        storage_class=self.storage_class,
+                        name=name,
+                        content=content,
+                    )
+                    self.timings.append(elapsed)
+                    self.objects.append(obj)
+                except driver_errors.DriverConnectionError as err:
+                    self.errors.append(err)
+
 
         self.total_time = utils.timeit(upload_files)[0]
 
@@ -67,6 +73,7 @@ class UploadBenchmark(BaseBenchmark):
 
     def make_stats(self):
         count = len(self.timings)
+        error_count = len(self.errors)
         size = self.params['object_size']
         total_size = count * size
         test_time = sum(self.timings)
@@ -79,6 +86,7 @@ class UploadBenchmark(BaseBenchmark):
             'object_size': size,
             'total_size': total_size,
             'test_time': test_time,
+            'errors': error_count,
         }
         if count > 1:
             stats.update({
@@ -109,12 +117,17 @@ class DownloadBenchmark(BaseBenchmark):
             content = utils.get_random_content(self.params['object_size'])
 
             self.logger.debug("Uploading object '%s'", name)
-            obj = self.driver.upload(
-                bucket_id=bucket_name,
-                storage_class=self.params['storage_class'],
-                name=name,
-                content=content,
-            )
+            try:
+                obj = self.driver.upload(
+                    bucket_id=bucket_name,
+                    storage_class=self.params['storage_class'],
+                    name=name,
+                    content=content,
+                )
+            except driver_errors.DriverError as err:
+                self.logger.warning("Error during file uploading, tearing down the environment.")
+                self.tear_down()
+                raise
             self.objects.append(obj)
         self.urls = [
             self.driver.get_url(bucket_id=bucket_name, name=obj['name'])

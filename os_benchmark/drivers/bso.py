@@ -24,9 +24,9 @@ class Driver(s3.Driver):
     endpoint_url = 'https://eu.bso.st'
     default_kwargs = {
         'endpoint_url': endpoint_url,
-        'config': {
-            'signature_version': 's3v4',
-        }
+    }
+    default_config = {
+        'signature_version': 's3v4',
     }
 
     def get_url(self, bucket_id, name, **kwargs):
