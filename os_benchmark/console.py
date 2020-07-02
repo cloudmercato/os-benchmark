@@ -16,6 +16,7 @@ ACTIONS = (
     'delete-bucket',
     'list-objects',
     'upload',
+    'download',
     'delete-object',
     'clean-bucket',
     'clean',
@@ -173,6 +174,19 @@ class Controller:
             content=content,
         )
         return obj
+
+    def download(self):
+        self.subparser.add_argument('--bucket-id')
+        self.subparser.add_argument('--name')
+        parsed_args = self.parser.parse_known_args()[0]
+        url = self.driver.get_url(
+            bucket_id=parsed_args.bucket_id,
+            name=parsed_args.name,
+        )
+        self.logger.debug('URL: %s', url)
+        fd = self.driver.download(url)
+        print(fd.read())
+
 
     def list_objects(self):
         self.subparser.add_argument('bucket_id')
