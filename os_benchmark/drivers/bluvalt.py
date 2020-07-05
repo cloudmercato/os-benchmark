@@ -25,6 +25,7 @@ from os_benchmark.drivers import swift
 
 class Driver(swift.Driver):
     """Bluvalt Swift Driver"""
+    id = 'bluvalt'
     default_kwargs = {
         'authurl': 'https://api-object.bluvalt.com:8083/auth/v1.0',
     }

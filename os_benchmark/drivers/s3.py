@@ -19,8 +19,11 @@ Configuration
 All parameters except ``driver`` will be passed to ``boto3.resource``.
 """
 from functools import wraps
-import boto3
+
 import botocore
+import boto3
+from boto3.s3.transfer import TransferConfig
+
 from os_benchmark.drivers import base, errors
 
 
@@ -50,6 +53,7 @@ def handle_request(method):
 
 
 class Driver(base.RequestsMixin, base.BaseDriver):
+    id = 's3'
     default_kwargs = {}
     default_config = {}
     _default_config = {
@@ -129,14 +133,23 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         return objects
 
     @handle_request
-    def upload(self, bucket_id, name, content, acl='public-read', **kwargs):
+    def upload(self, bucket_id, name, content, acl='public-read',
+               multipart_threshold=None, multipart_chunksize=None,
+               max_concurrency=None,
+               **kwargs):
         extra = {'ACL': acl}
+        transfer_config = TransferConfig(
+            multipart_threshold=multipart_threshold,
+            max_concurrency=max_concurrency,
+            multipart_chunksize=multipart_chunksize,
+        )
         try:
             self.s3.meta.client.upload_fileobj(
-                content,
-                bucket_id,
-                name,
-                extra,
+                Fileobj=content,
+                Bucket=bucket_id,
+                Key=name,
+                ExtraArgs=extra,
+                Config=transfer_config,
             )
         except botocore.exceptions.ClientError as err:
             code = err.response['Error']['Code']

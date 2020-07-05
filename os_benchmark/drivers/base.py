@@ -12,6 +12,7 @@ USER_AGENT = 'os-benchmark'
 
 class BaseDriver:
     """Base Driver class"""
+    id = None
     read_timeout = None
     connect_timeout = None
 
@@ -21,7 +22,7 @@ class BaseDriver:
         self.kwargs = self._validate_kwargs(kwargs)
         self.logger = logging.getLogger('osb.driver')
 
-    def setup(self):
+    def setup(self, **kwargs):
         """Initialiaze driver before benchmark"""
 
     def _validate_kwargs(self, kwargs):

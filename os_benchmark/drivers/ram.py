@@ -16,6 +16,8 @@ from urllib.parse import urlparse
 from os_benchmark.drivers import base, errors
 
 class Driver(base.BaseDriver):
+    id = 'ram'
+
     def __init__(self):
         self.buckets = {}
 

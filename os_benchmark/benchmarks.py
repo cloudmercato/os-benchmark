@@ -9,7 +9,7 @@ class BaseBenchmark:
     """Base Benchmark class"""
     def __init__(self, driver):
         self.driver = driver
-        self.logger = logging.getLogger('osb.benchmark')
+        self.logger = logging.getLogger('osb')
         self.params = {}
 
     def set_params(self, **kwargs):
@@ -37,6 +37,8 @@ class UploadBenchmark(BaseBenchmark):
         self.timings = []
         self.objects = []
         self.errors = []
+        self.driver.setup(**self.params)
+
         bucket_name = utils.get_random_name()
         self.storage_class = self.params.get('storage_class')
         self.logger.debug("Creating bucket '%s'", bucket_name)
@@ -59,10 +61,14 @@ class UploadBenchmark(BaseBenchmark):
                         storage_class=self.storage_class,
                         name=name,
                         content=content,
+                        multipart_threshold=self.params['multipart_threshold'],
+                        multipart_chunksize=self.params['multipart_chunksize'],
+                        max_concurrency=self.params['max_concurrency'],
                     )
                     self.timings.append(elapsed)
                     self.objects.append(obj)
                 except driver_errors.DriverConnectionError as err:
+                    self.logger.error(err)
                     self.errors.append(err)
 
 
@@ -77,17 +83,27 @@ class UploadBenchmark(BaseBenchmark):
         size = self.params['object_size']
         total_size = count * size
         test_time = sum(self.timings)
+        rate = (count/test_time) if test_time else 0
+        bw = (total_size/test_time/2**20) if test_time else 0
         stats = {
             'operation': 'upload',
             'ops': count,
             'time': self.total_time,
-            'rate': (count/test_time),
-            'bw': (total_size/test_time/2**20),
+            'bw': bw,
+            'rate': rate,
             'object_size': size,
             'object_number': self.params['object_number'],
+            'multipart_threshold': self.params['multipart_threshold'],
+            'multipart_chunksize': self.params['multipart_chunksize'],
+            'max_concurrency': self.params['multipart_chunksize'],
+            'ops': count,
+            'time': self.total_time,
             'total_size': total_size,
             'test_time': test_time,
             'errors': error_count,
+            'driver': self.driver.id,
+            'read_timeout': self.driver.read_timeout,
+            'connect_timeout': self.driver.connect_timeout,
         }
         if count > 1:
             stats.update({
@@ -158,6 +174,8 @@ class DownloadBenchmark(BaseBenchmark):
         size = self.params['object_size']
         total_size = count * size
         test_time = sum(self.timings)
+        bw = (total_size/test_time/2**20) if test_time else 0
+        rate = (count/test_time) if test_time else 0
         stats = {
             'operation': 'download',
             'ops': count,
@@ -166,12 +184,12 @@ class DownloadBenchmark(BaseBenchmark):
             'object_number': self.params['object_number'],
             'total_size': total_size,
             'test_time': test_time,
+            'bw': bw,
+            'rate': rate,
             'errors': error_count,
         }
         if count > 1:
             stats.update({
-                'rate': (count/test_time),
-                'bw': (total_size/test_time/2**20),
                 'avg': statistics.mean(self.timings),
                 'stddev': statistics.stdev(self.timings),
                 'med': statistics.median(self.timings),

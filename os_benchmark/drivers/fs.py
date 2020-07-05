@@ -17,6 +17,8 @@ from os_benchmark.drivers import base
 
 
 class Driver(base.BaseDriver):
+    id = 'fs'
+
     def setup(self):
         os.makedirs(self.path)
 

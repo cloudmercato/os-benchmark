@@ -28,6 +28,7 @@ from os_benchmark.drivers import s3
 
 class Driver(s3.Driver):
     """Wasabi S3 Driver"""
+    id = 'wasabi'
     endpoint_url = 'https://s3.wasabisys.com'
     endpoint_urls = {
         'us-east-1': 'https://s3.us-east-1.wasabisys.com',

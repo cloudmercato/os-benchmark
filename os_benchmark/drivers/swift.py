@@ -22,10 +22,12 @@ All parameters except ``driver`` will be passed to ``swiftclient.Connection``.
 .. _`Openstack Swift`: https://github.com/openstack/swift
 """
 import swiftclient
+from swiftclient.service import SwiftService, SwiftUploadObject
 from os_benchmark.drivers import base, errors
 
 
 class Driver(base.RequestsMixin, base.BaseDriver):
+    id = 'swift'
     default_kwargs = {}
 
     @property
@@ -35,6 +37,24 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             kwargs.update(self.default_kwargs)
             self._swift = swiftclient.Connection(**self.kwargs)
         return self._swift
+
+    def setup(self, **kwargs):
+        self.service_kwargs = kwargs.copy()
+        self.service_kwargs.update(
+            retries=0
+        )
+
+        if 'max_concurrency' in kwargs:
+            self.service_kwargs.update(
+                object_threads=kwargs['max_concurrency'],
+                object_uu_threads=kwargs['max_concurrency'],
+                segment_threads=kwargs['max_concurrency'],
+            )
+        if 'multipart_chunksize' in kwargs:
+            self.service_kwargs['segment_size'] = kwargs['multipart_chunksize']
+        swiftclient.service._default_global_options.update(self.service_kwargs)
+        self.logger.debug("Swift default config: %s", self.service_kwargs)
+        self.swift  # Avoid lazyness
 
     def list_buckets(self, **kwargs):
         _, raw_buckets = self.swift.get_account()
@@ -69,10 +89,6 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             raise
         return [o['name'] for o in objs]
 
-    def upload(self, bucket_id, name, content, acl='public-read', **kwargs):
-        self.swift.put_object(bucket_id, name, content)
-        return {'name': name}
-
     def delete_object(self, bucket_id, name, **kwargs):
         try:
             self.swift.delete_object(bucket_id, name)
@@ -80,3 +96,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             if err.http_status == 404:
                 return
             raise
+
+    def upload(self, bucket_id, name, content, acl='public-read', **kwargs):
+        self.swift.put_object(bucket_id, name, content)
+        return {'name': name}

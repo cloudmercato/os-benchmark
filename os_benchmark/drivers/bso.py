@@ -21,6 +21,7 @@ from os_benchmark.drivers import s3
 
 class Driver(s3.Driver):
     """BSO-ST Driver"""
+    id = 'bso'
     endpoint_url = 'https://eu.bso.st'
     default_kwargs = {
         'endpoint_url': endpoint_url,

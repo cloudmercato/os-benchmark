@@ -1,6 +1,7 @@
 """
 Command-line management module.
 """
+import os
 import sys
 import argparse
 import json
@@ -23,6 +24,9 @@ ACTIONS = (
     'time-upload',
     'time-download',
 )
+MULTIPART_THREHOLD = 64 * 2**20
+MULTIPART_CHUNKSIZE = 8 * 2**20
+MAX_CONCURRENCY = os.cpu_count() * 2
 
 logger = logging.getLogger('osb')
 
@@ -154,6 +158,9 @@ class Controller:
         content_group.add_argument('--content', type=argparse.FileType('rb'), required=False)
         content_group.add_argument('--content-size', type=int, required=False)
         content_group.add_argument('--', '--from-stdin', default=False, action='store_true', dest='from_stdin')
+        self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
+        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
+        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
         parsed_args = self.parser.parse_known_args()[0]
 
         name = parsed_args.name or utils.get_random_name()
@@ -172,6 +179,9 @@ class Controller:
             storage_class=parsed_args.storage_class,
             name=name,
             content=content,
+            multipart_threshold=parsed_args.multipart_threshold,
+            multipart_chunksize=parsed_args.multipart_chunksize,
+            max_concurrency=parsed_args.max_concurrency,
         )
         return obj
 
@@ -234,6 +244,9 @@ class Controller:
         self.subparser.add_argument('--storage-class', required=False)
         self.subparser.add_argument('--object-size', type=int, required=True)
         self.subparser.add_argument('--object-number', type=int, required=True)
+        self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
+        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
+        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.UploadBenchmark(self.driver)
@@ -241,6 +254,9 @@ class Controller:
             storage_class=parsed_args.storage_class,
             object_size=parsed_args.object_size,
             object_number=parsed_args.object_number,
+            multipart_threshold=parsed_args.multipart_threshold,
+            multipart_chunksize=parsed_args.multipart_chunksize,
+            max_concurrency=parsed_args.max_concurrency,
         )
         benchmark.setup()
         benchmark.run()
