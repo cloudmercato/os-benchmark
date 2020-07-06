@@ -95,7 +95,7 @@ class UploadBenchmark(BaseBenchmark):
             'object_number': self.params['object_number'],
             'multipart_threshold': self.params['multipart_threshold'],
             'multipart_chunksize': self.params['multipart_chunksize'],
-            'max_concurrency': self.params['multipart_chunksize'],
+            'max_concurrency': self.params['max_concurrency'],
             'ops': count,
             'time': self.total_time,
             'total_size': total_size,

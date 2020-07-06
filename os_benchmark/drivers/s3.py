@@ -11,7 +11,7 @@ Configuration
 
   ---
   s3:
-    driver: s2
+    driver: s3
     aws_access_key_id: <your_ak>
     aws_secret_access_key: <your_sk>
     region: eu-west-1

@@ -53,12 +53,12 @@ def create_parser():
     )
     parser.add_argument(
         '-C', '--connect-timeout',
-        default=None, required=False, type=float,
+        default=5, required=False, type=float,
         help="The time in seconds till a timeout is considered during TCP connection.",
     )
     parser.add_argument(
         '-R', '--read-timeout',
-        default=None, required=False, type=float,
+        default=10, required=False, type=float,
         help="The time in seconds till a timeout is considered durint HTTP read",
     )
     parser.add_argument(
