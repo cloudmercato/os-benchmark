@@ -96,8 +96,6 @@ class UploadBenchmark(BaseBenchmark):
             'multipart_threshold': self.params['multipart_threshold'],
             'multipart_chunksize': self.params['multipart_chunksize'],
             'max_concurrency': self.params['max_concurrency'],
-            'ops': count,
-            'time': self.total_time,
             'total_size': total_size,
             'test_time': test_time,
             'errors': error_count,
@@ -125,9 +123,10 @@ class DownloadBenchmark(BaseBenchmark):
         self.objects = []
         bucket_name = utils.get_random_name()
         self.logger.debug("Creating bucket '%s'", bucket_name)
+        self.storage_class = self.params.get('storage_class')
         self.bucket = self.driver.create_bucket(
             name=bucket_name,
-            storage_class=self.params['storage_class']
+            storage_class=self.storage_class,
         )
         for i in range(self.params['object_number']):
             name = utils.get_random_name()
@@ -137,7 +136,7 @@ class DownloadBenchmark(BaseBenchmark):
             try:
                 obj = self.driver.upload(
                     bucket_id=bucket_name,
-                    storage_class=self.params['storage_class'],
+                    storage_class=self.storage_class,
                     name=name,
                     content=content,
                 )
@@ -180,13 +179,19 @@ class DownloadBenchmark(BaseBenchmark):
             'operation': 'download',
             'ops': count,
             'time': self.total_time,
-            'object_size': size,
-            'object_number': self.params['object_number'],
-            'total_size': total_size,
-            'test_time': test_time,
             'bw': bw,
             'rate': rate,
+            'object_size': size,
+            'object_number': self.params['object_number'],
+            'max_concurrency': 1,
+            'multipart_threshold': 0,
+            'multipart_chunksize': 0,
+            'total_size': total_size,
+            'test_time': test_time,
             'errors': error_count,
+            'driver': self.driver.id,
+            'read_timeout': self.driver.read_timeout,
+            'connect_timeout': self.driver.connect_timeout,
         }
         if count > 1:
             stats.update({

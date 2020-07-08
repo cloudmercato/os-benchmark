@@ -40,13 +40,17 @@ def handle_request(method):
             raise errors.DriverConnectionError(err)
         except botocore.exceptions.ClientError as err:
             code = err.response['Error']['Code']
+
+            if 'Message' not in err.response['Error']:
+                raise errors.DriverConnectionError(err)
+
             msg = err.response['Error']['Message']
             if code == '504':
                 raise errors.DriverConnectionError(err)
             if code == 'ServiceUnavailable':
                 raise errors.DriverConnectionError(err)
             if code == 'InvalidAccessKeyId':
-                msg += " (endpoint: %s)" % self.endpoint_url
+                msg += " (endpoint: %s)" % getattr(self, 'endpoint_url', None)
                 raise errors.DriverAuthenticationError(msg)
             raise
     return _handle_request
@@ -138,6 +142,10 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                max_concurrency=None,
                **kwargs):
         extra = {'ACL': acl}
+        multipart_threshold = multipart_threshold or 64*2**20
+        multipart_chunksize = multipart_chunksize or 64*2**20
+        max_concurrency = max_concurrency or 10
+
         transfer_config = TransferConfig(
             multipart_threshold=multipart_threshold,
             max_concurrency=max_concurrency,
