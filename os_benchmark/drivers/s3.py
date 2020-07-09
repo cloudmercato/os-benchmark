@@ -50,7 +50,7 @@ def handle_request(method):
             if code == 'ServiceUnavailable':
                 raise errors.DriverConnectionError(err)
             if code == 'InvalidAccessKeyId':
-                msg += " (endpoint: %s)" % getattr(self, 'endpoint_url', None)
+                msg += " (endpoint: %s)" % self.s3.meta.client._endpoint.host
                 raise errors.DriverAuthenticationError(msg)
             raise
     return _handle_request
