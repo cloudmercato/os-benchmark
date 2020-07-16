@@ -14,6 +14,10 @@ class DriverAuthenticationError(DriverError):
     """Driver authentication error"""
 
 
+class DriverPermissionError(DriverError):
+    """Driver permission error"""
+
+
 class DriverConfigError(DriverError):
     """Driver configuration error"""
 

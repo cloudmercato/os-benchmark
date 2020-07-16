@@ -8,13 +8,18 @@ from requests.packages.urllib3.util.retry import Retry
 from os_benchmark.drivers import errors
 
 USER_AGENT = 'os-benchmark'
+MULTIPART_THRESHOLD = 64*2**20
+MULTIPART_CHUNKSIZE = 64*2**20
+MAX_CONCURRENCY = 10
+CONNECT_TIMEOUT = 3
+READ_TIMEOUT = 1
 
 
 class BaseDriver:
     """Base Driver class"""
     id = None
-    read_timeout = None
-    connect_timeout = None
+    read_timeout = READ_TIMEOUT
+    connect_timeout = CONNECT_TIMEOUT
 
     def __init__(self, read_timeout=None, connect_timeout=None, **kwargs):
         self.read_timeout = read_timeout or self.read_timeout
@@ -112,9 +117,12 @@ class RequestsMixin:
 
     def download(self, url, block_size=65536, **kwargs):
         self.logger.debug('GET %s', url)
-        with self.session.get(url, stream=True) as response:
-            if response.status_code != 200:
-                msg = '%s %s' % (url, response.content)
-                raise errors.base.InvalidHttpCode(msg, response.status_code)
-            for chunk in response.iter_content(chunk_size=block_size):
-                pass
+        try:
+            with self.session.get(url, stream=True) as response:
+                if response.status_code != 200:
+                    msg = '%s %s' % (url, response.content)
+                    raise errors.base.InvalidHttpCode(msg, response.status_code)
+                for chunk in response.iter_content(chunk_size=block_size):
+                    pass
+        except requests.exceptions.ConnectionError as err:
+            raise errors.DriverConnectionError(err.args[0])

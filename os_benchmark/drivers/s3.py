@@ -63,8 +63,8 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     _default_config = {
         'user_agent': base.USER_AGENT,
         'retries': {'max_attempts': 0},
-        'connect_timeout': 3,
-        'read_timeout': 1,
+        'connect_timeout': base.CONNECT_TIMEOUT,
+        'read_timeout': base.READ_TIMEOUT,
         'parameter_validation': False,
         # 'max_pool_connections': self.num_thread,
         # 'proxies': proxies,
@@ -142,9 +142,9 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                max_concurrency=None,
                **kwargs):
         extra = {'ACL': acl}
-        multipart_threshold = multipart_threshold or 64*2**20
-        multipart_chunksize = multipart_chunksize or 64*2**20
-        max_concurrency = max_concurrency or 10
+        multipart_threshold = multipart_threshold or base.MULTIPART_THRESHOLD
+        multipart_chunksize = multipart_chunksize or base.MULTIPART_CHUNKSIZE
+        max_concurrency = max_concurrency or base.MAX_CONCURRENCY
 
         transfer_config = TransferConfig(
             multipart_threshold=multipart_threshold,
