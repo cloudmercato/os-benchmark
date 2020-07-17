@@ -10,6 +10,21 @@ Providers
 
 Specific provider drivers bringing quicker configuration.
 
+Alibaba Cloud
+~~~~~~~~~~~~~
+
+.. automodule:: os_benchmark.drivers.alibaba
+
+Amazon Web Services
+~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: os_benchmark.drivers.s3
+
+Backblaze
+~~~~~~~~~
+
+.. automodule:: os_benchmark.drivers.backblaze
+
 BSO-ST
 ~~~~~~
 
@@ -20,10 +35,40 @@ Bluvalt
 
 .. automodule:: os_benchmark.drivers.bluvalt
 
+DigitalOcean
+~~~~~~~~~~~~
+
+.. automodule:: os_benchmark.drivers.digitalocean
+
 Exoscale
 ~~~~~~~~
 
 .. automodule:: os_benchmark.drivers.exoscale
+
+IBM
+~~~
+
+.. automodule:: os_benchmark.drivers.ibm
+
+Linode
+~~~~~~
+
+.. automodule:: os_benchmark.drivers.linode
+
+Microsoft Azure
+~~~~~~~~~~~~~~~
+
+.. automodule:: os_benchmark.drivers.azure
+
+OVHcloud
+~~~~~~~~
+
+.. automodule:: os_benchmark.drivers.ovhcloud
+
+T-Systems Open Telekom Cloud
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: os_benchmark.drivers.otc
 
 Scaleway
 ~~~~~~~~
