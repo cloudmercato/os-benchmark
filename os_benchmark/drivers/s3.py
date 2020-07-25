@@ -99,12 +99,16 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         buckets = [{'id': b.name} for b in raw_buckets]
         return buckets
 
-    @handle_request
-    def create_bucket(self, name, acl='public-read', **kwargs):
-        params = {
+    def _get_create_request_params(self, name, acl, **kwargs):
+        return {
             'Bucket': name,
             'ACL': acl,
         }
+
+    @handle_request
+    def create_bucket(self, name, acl='public-read', **kwargs):
+        params = self._get_create_request_params(name=name, acl=acl, **kwargs)
+        self.logger.debug('Create bucket params: %s', params)
         bucket = self.s3.create_bucket(**params)
         return {'id': name}
 

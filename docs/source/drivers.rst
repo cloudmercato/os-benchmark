@@ -18,7 +18,7 @@ Alibaba Cloud
 Amazon Web Services
 ~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: os_benchmark.drivers.s3
+.. automodule:: os_benchmark.drivers.aws
 
 Backblaze
 ~~~~~~~~~
