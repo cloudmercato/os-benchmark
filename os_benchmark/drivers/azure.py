@@ -17,6 +17,10 @@ Configuration
 from azure.storage import blob
 from os_benchmark.drivers import base, errors
 
+ACLS = {
+    'public-read': 'container',
+}
+
 
 class Driver(base.RequestsMixin, base.BaseDriver):
     id = 'azure'
@@ -46,8 +50,11 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         containers = self.client.list_containers()
         return [{'id': c.name} for c in containers]
 
-    def create_bucket(self, name, **kwargs):
-        bucket = self.client.create_container(name)
+    def create_bucket(self, name, acl='public-read', **kwargs):
+        bucket = self.client.create_container(
+            name=name,
+            public_access=ACLS.get(acl, None),
+        )
         return {'id': name}
 
     def delete_bucket(self, bucket_id, **kwargs):
@@ -77,3 +84,9 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     def delete_object(self, bucket_id, name, **kwargs):
         client = self.client.get_container_client(bucket_id)
         client.delete_blob(name)
+
+    def get_url(self, bucket_id, name, **kwargs):
+        url = 'https://%s.blob.core.windows.net/%s/%s' % (
+            self.client.account_name, bucket_id, name,
+        )
+        return url
