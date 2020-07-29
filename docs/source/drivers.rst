@@ -45,6 +45,11 @@ Exoscale
 
 .. automodule:: os_benchmark.drivers.exoscale
 
+Google Cloud
+~~~~~~~~~~~~
+
+.. automodule:: os_benchmark.drivers.google_s3
+
 IBM
 ~~~
 
