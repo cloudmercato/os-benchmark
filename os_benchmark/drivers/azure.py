@@ -69,15 +69,15 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         return [b.name for b in blobs]
 
     def upload(self, bucket_id, name, content, max_concurrency=None,
-               **kwargs):
-        client = self.client.get_container_client(
-            bucket_id
-        )
+               validate_content=False, **kwargs):
+        max_concurrency = max_concurrency or base.MAX_CONCURRENCY
+        client = self.client.get_container_client(bucket_id)
         client.upload_blob(
             name=name,
             data=content,
             max_concurrency=max_concurrency,
             timeout=self.read_timeout,
+            validate_content=validate_content,
         )
         return {'name': name}
 
