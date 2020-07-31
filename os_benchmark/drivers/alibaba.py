@@ -18,7 +18,7 @@ Configuration
 
 .. _oss2: https://github.com/aliyun/aliyun-oss-python-sdk
 .. _`Object Storage Service`: https://www.alibabacloud.com/product/oss
-.. _Alibaba Cloud: https://www.alibabacloud.com/
+.. _`Alibaba Cloud`: https://www.alibabacloud.com/
 """
 import concurrent.futures
 from functools import wraps

@@ -65,6 +65,13 @@ Microsoft Azure
 
 .. automodule:: os_benchmark.drivers.azure
 
+Oracle Cloud Infrastructure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: os_benchmark.drivers.oracle
+
+.. automodule:: os_benchmark.drivers.oracle_s3
+
 OVHcloud
 ~~~~~~~~
 
