@@ -138,8 +138,14 @@ class Controller:
 
     def delete_bucket(self):
         self.subparser.add_argument('bucket_id')
+        self.subparser.add_argument('--delete-files', action='store_true')
         parsed_args = self.parser.parse_known_args()[0]
 
+        if parsed_args.delete_files:
+            try:
+                self.driver.clean_bucket(bucket_id=parsed_args.bucket_id)
+            except driver_errors.DriverBucketUnfoundError:
+                return
         self.driver.delete_bucket(
             bucket_id=parsed_args.bucket_id,
         )
@@ -200,6 +206,7 @@ class Controller:
 
     def list_objects(self):
         self.subparser.add_argument('bucket_id')
+        self.subparser.add_argument('--url', action='store_true')
         parsed_args = self.parser.parse_known_args()[0]
         try:
             objects = self.driver.list_objects(
@@ -209,7 +216,14 @@ class Controller:
             self.logger.warning(err.args[0])
             return
         for obj in objects:
-            print(obj)
+            if parsed_args.url:
+                url = self.driver.get_url(
+                    bucket_id=parsed_args.bucket_id,
+                    name=obj
+                )
+                print(obj, url)
+            else:
+                print(obj)
 
     def delete_object(self):
         self.subparser.add_argument('bucket_id')
