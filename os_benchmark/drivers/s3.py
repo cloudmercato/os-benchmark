@@ -58,6 +58,8 @@ def handle_request(method):
 
 class Driver(base.RequestsMixin, base.BaseDriver):
     id = 's3'
+    default_acl = 'public-read'
+    default_object_acl = 'public-read'
     default_kwargs = {}
     default_config = {}
     _default_config = {
@@ -106,7 +108,8 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         }
 
     @handle_request
-    def create_bucket(self, name, acl='public-read', **kwargs):
+    def create_bucket(self, name, acl=None, **kwargs):
+        acl = acl or self.default_acl
         params = self._get_create_request_params(name=name, acl=acl, **kwargs)
         self.logger.debug('Create bucket params: %s', params)
         bucket = self.s3.create_bucket(**params)
@@ -141,10 +144,11 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         return objects
 
     @handle_request
-    def upload(self, bucket_id, name, content, acl='public-read',
+    def upload(self, bucket_id, name, content, acl=None,
                multipart_threshold=None, multipart_chunksize=None,
                max_concurrency=None,
                **kwargs):
+        acl = acl or self.default_object_acl
         extra = {'ACL': acl}
         multipart_threshold = multipart_threshold or base.MULTIPART_THRESHOLD
         multipart_chunksize = multipart_chunksize or base.MULTIPART_CHUNKSIZE
@@ -167,6 +171,8 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             code = err.response['Error']['Code']
             msg = err.response['Error']['Message']
             if code == 'NoSuchBucket':
+                raise errors.DriverBucketUnfoundError(msg)
+            elif code == 'AccessDenied':
                 raise errors.DriverBucketUnfoundError(msg)
             raise
         return {'name': name}
