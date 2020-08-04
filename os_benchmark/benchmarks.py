@@ -128,6 +128,7 @@ class DownloadBenchmark(BaseBenchmark):
             name=bucket_name,
             storage_class=self.storage_class,
         )
+        self.bucket_id = self.bucket['id']
         for i in range(self.params['object_number']):
             name = utils.get_random_name()
             content = utils.get_random_content(self.params['object_size'])
@@ -135,7 +136,7 @@ class DownloadBenchmark(BaseBenchmark):
             self.logger.debug("Uploading object '%s'", name)
             try:
                 obj = self.driver.upload(
-                    bucket_id=bucket_name,
+                    bucket_id=self.bucket_id,
                     storage_class=self.storage_class,
                     name=name,
                     content=content,
@@ -146,7 +147,11 @@ class DownloadBenchmark(BaseBenchmark):
                 raise
             self.objects.append(obj)
         self.urls = [
-            self.driver.get_url(bucket_id=bucket_name, name=obj['name'])
+            self.driver.get_url(
+                bucket_id=self.bucket_id,
+                name=obj['name'],
+                bucket_name=self.bucket['name'],
+            )
             for obj in self.objects
         ]
 
