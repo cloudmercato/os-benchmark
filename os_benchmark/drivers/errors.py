@@ -32,3 +32,7 @@ class DriverBucketUnfoundError(DriverError):
 
 class DriverObjectUnfoundError(DriverError):
     """Driver object unfound error"""
+
+
+class DriverStorageQuotaError(DriverError):
+    """Driver service storage quota error"""

@@ -76,7 +76,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                 self.kwargs['application_key_id'],
                 self.kwargs['application_key']
             )
-            retry = Retry(total=0)
+            retry = Retry(total=6)
             timeout = (self.connect_timeout, self.read_timeout)
             adapter = base.HTTPAdapter(max_retries=retry, timeout=timeout)
             self._client.raw_api.b2_http.session.mount('http://', adapter)
@@ -107,9 +107,18 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     def delete_bucket(self, bucket_id, **kwargs):
         bucket = self._get_bucket(bucket_id)
         try:
-            self.client.delete_bucket(bucket)
+            unfinisheds = bucket.list_unfinished_large_files()
         except exception.NonExistentBucket:
             return
+        for unfinished in unfinisheds:
+            bucket.cancel_large_file(unfinished.file_id)
+
+        try:
+            self.client.delete_bucket(bucket)
+        except exception.BadRequest as err:
+            if err.code == 'cannot_delete_non_empty_bucket':
+                raise errors.DriverNonEmptyBucketError(err.message)
+            raise
 
     def list_objects(self, bucket_id, **kwargs):
         bucket = self._get_bucket(bucket_id)
@@ -163,7 +172,9 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             futures = []
             for part_id, part_range in enumerate(part_ranges):
                 part_id += 1
-                result = executor.submit(_upload, part_id=part_id, part_range=part_range)
+                print(part_id)
+                _upload(part_id=part_id, part_range=part_range)
+                # result = executor.submit(_upload, part_id=part_id, part_range=part_range)
                 futures.append(result)
             for future in futures:
                 future.result()
@@ -181,22 +192,23 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         upload_source = UploadSourceFileIo(content)
         write_intents = [b2.WriteIntent(upload_source)]
 
-        if content.size > multipart_threshold:
-            self._multipart_upload(bucket_id, name, upload_source, multipart_chunksize, max_concurrency)
-        else:
-            self._simple_upload(bucket_id, name, upload_source)
+        try:
+            if content.size > multipart_threshold:
+                self._multipart_upload(bucket_id, name, upload_source, multipart_chunksize, max_concurrency)
+            else:
+                self._simple_upload(bucket_id, name, upload_source)
+        except exception.StorageCapExceeded as err:
+            raise errors.DriverStorageQuotaError(err)
         return {'name': name}
 
-    # @handle_request
+    @handle_request
     def delete_object(self, bucket_id, name, **kwargs):
         bucket = self._get_bucket(bucket_id)
-        files = bucket.ls()
-        for file_, _ in files:
-            if name != file_.file_name:
-                continue
+        versions = bucket.list_file_versions(name)
+        for file_, _ in versions:
             try:
                 bucket.delete_file_version(
-                    file_.id_,
+                    version,
                     name,
                 )
             except exception.FileNotPresent:
