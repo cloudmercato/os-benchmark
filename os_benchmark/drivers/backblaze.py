@@ -15,7 +15,6 @@ Configuration
 
 .. _b2sdk: https://github.com/Backblaze/b2-sdk-python
 """
-import concurrent.futures
 from functools import wraps
 import hashlib
 from requests.packages.urllib3.util.retry import Retry
@@ -28,29 +27,6 @@ ACLS = {
     'public-read': 'allPublic',
     'private': 'allPrivate',
 }
-
-class MultiPart:
-    """Object simulating part from file-object for multipart-upload."""
-    def __init__(self, file_object, size):
-        self.file_object = file_object
-        self.size = size
-        self.offset = 0
-
-    def read(self, chunksize=None):
-        if self.offset >= self.size:
-            return ''
-
-        if (chunksize is None or chunksize < 0) or (chunksize + self.offset >= self.size):
-            data = self.file_object.read(self.size - self.offset)
-            self.offset = self.size
-            return data
-
-        self.offset += chunksize
-        return self.file_object.read(chunksize)
-
-    @property
-    def len(self):
-        return self.size
 
 
 class UploadSourceFileIo(AbstractUploadSource):
@@ -164,27 +140,19 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     def _multipart_upload(self, bucket_id, name, content, multipart_chunksize=None, max_concurrency=None):
         bucket = self._get_bucket(bucket_id)
 
-        multipart_chunksize = multipart_chunksize or base.MULTIPART_CHUNKSIZE
-        max_concurrency = max_concurrency or base.MAX_CONCURRENCY
-
-        content_length = content.size
-        part_id = 1
-        offset = 0
-        parts = []
-
-        def _upload(part_id, offset):
+        def _upload(part_id, offset, content, file_id):
             self.logger.debug('Uploading %s part %s', name, part_id)
-            part = MultiPart(content, multipart_chunksize)
+            part = base.MultiPart(content, multipart_chunksize)
             upload_source = UploadSourceFileIo(content)
             result = bucket.api.session.upload_part(
                 file_id=file_id,
                 part_number=part_id,
                 sha1_sum='do_not_verify',
-                content_length=content_length,
+                content_length=content.size,
                 input_stream=upload_source,
             )
             self.logger.debug('Done %s part %s', name, part_id)
-            parts.append(result)
+            return result
 
         result = bucket.api.session.start_large_file(
             bucket_id=bucket_id,
@@ -194,19 +162,15 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         )
         file_id = result['fileId']
 
-        pool_kwargs = {'max_workers': max_concurrency}
-        with concurrent.futures.ThreadPoolExecutor(**pool_kwargs) as executor:
-            futures = []
-            while offset < content_length:
-                chunk_size = min(multipart_chunksize, content_length - offset)
-                result = executor.submit(_upload, part_id=part_id, offset=offset)
-
-                futures.append(result)
-                part_id += 1
-                offset += multipart_chunksize
-
-            for future in futures:
-                future.result()
+        uploader = base.MultiPartUploader(
+            content=content,
+            multipart_chunksize=multipart_chunksize,
+            max_concurrency=max_concurrency,
+            extre_uplood_kwargs={
+                'file_id': file_id,
+            }
+        )
+        parts = uploader.run(_upload)
 
         bucket.api.session.finish_large_file(
             file_id=file_id,

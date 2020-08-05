@@ -3,6 +3,7 @@ Base Driver class module.
 """
 import logging
 import requests
+import concurrent.futures
 from requests.adapters import HTTPAdapter as BaseHTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 from os_benchmark.drivers import errors
@@ -13,6 +14,65 @@ MULTIPART_CHUNKSIZE = 64*2**20
 MAX_CONCURRENCY = 10
 CONNECT_TIMEOUT = 3
 READ_TIMEOUT = 1
+
+
+class MultiPart:
+    """Object simulating part from file-object for multipart-upload."""
+    def __init__(self, file_object, size):
+        self.file_object = file_object
+        self.size = size
+        self.offset = 0
+
+    def read(self, chunksize=None):
+        if self.offset >= self.size:
+            return ''
+
+        if (chunksize is None or chunksize < 0) or (chunksize + self.offset >= self.size):
+            data = self.file_object.read(self.size - self.offset)
+            self.offset = self.size
+            return data
+
+        self.offset += chunksize
+        return self.file_object.read(chunksize)
+
+    @property
+    def len(self):
+        return self.size
+
+
+class MultiPartUploader:
+    """Helper creating a thread pool and splitting file in several parts."""
+    def __init__(self, content, max_concurrency=None, multipart_chunksize=None, extre_uplood_kwargs=None):
+        self.content = content
+        self.max_concurrency = max_concurrency or MAX_CONCURRENCY
+        self.extre_uplood_kwargs = extre_uplood_kwargs or {}
+        self.multipart_chunksize = multipart_chunksize or MULTIPART_CHUNKSIZE
+
+    def run(self, upload_func):
+        content_length = self.content.size
+        part_id = 1
+        offset = 0
+        futures = []
+
+        pool_kwargs = {'max_workers': self.max_concurrency}
+        with concurrent.futures.ThreadPoolExecutor(**pool_kwargs) as executor:
+            while offset < content_length:
+                chunk_size = min(self.multipart_chunksize, content_length - offset)
+                result = executor.submit(
+                    upload_func,
+                    content=self.content,
+                    part_id=part_id,
+                    offset=offset,
+                    **self.extre_uplood_kwargs,
+                )
+
+                futures.append(result)
+                part_id += 1
+                offset += self.multipart_chunksize
+
+            for future in futures:
+                future.result()
+        return futures
 
 
 class BaseDriver:
