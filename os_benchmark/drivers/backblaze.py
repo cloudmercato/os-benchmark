@@ -29,6 +29,29 @@ ACLS = {
     'private': 'allPrivate',
 }
 
+class MultiPart:
+    """Object simulating part from file-object for multipart-upload."""
+    def __init__(self, file_object, size):
+        self.file_object = file_object
+        self.size = size
+        self.offset = 0
+
+    def read(self, chunksize=None):
+        if self.offset >= self.size:
+            return ''
+
+        if (chunksize is None or chunksize < 0) or (chunksize + self.offset >= self.size):
+            data = self.file_object.read(self.size - self.offset)
+            self.offset = self.size
+            return data
+
+        self.offset += chunksize
+        return self.file_object.read(chunksize)
+
+    @property
+    def len(self):
+        return self.size
+
 
 class UploadSourceFileIo(AbstractUploadSource):
     def __init__(self, file):
@@ -138,26 +161,30 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             data_stream=upload_source,
         )
 
-    def _multipart_upload(self, bucket_id, name, upload_source, multipart_chunksize=None, max_concurrency=None):
+    def _multipart_upload(self, bucket_id, name, content, multipart_chunksize=None, max_concurrency=None):
         bucket = self._get_bucket(bucket_id)
 
         multipart_chunksize = multipart_chunksize or base.MULTIPART_CHUNKSIZE
         max_concurrency = max_concurrency or base.MAX_CONCURRENCY
 
-        content_length = upload_source.get_content_length()
-        part_ranges = utils.choose_part_ranges(content_length, multipart_chunksize)
-        progress_listener = bucket_.DoNothingProgressListener()
+        content_length = content.size
+        part_id = 1
+        offset = 0
+        parts = []
 
-        def _upload(part_id, part_range):
+        def _upload(part_id, offset):
             self.logger.debug('Uploading %s part %s', name, part_id)
+            part = MultiPart(content, multipart_chunksize)
+            upload_source = UploadSourceFileIo(content)
             result = bucket.api.session.upload_part(
                 file_id=file_id,
                 part_number=part_id,
                 sha1_sum='do_not_verify',
-                content_length=part_range[1],
+                content_length=content_length,
                 input_stream=upload_source,
             )
             self.logger.debug('Done %s part %s', name, part_id)
+            parts.append(result)
 
         result = bucket.api.session.start_large_file(
             bucket_id=bucket_id,
@@ -170,18 +197,20 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         pool_kwargs = {'max_workers': max_concurrency}
         with concurrent.futures.ThreadPoolExecutor(**pool_kwargs) as executor:
             futures = []
-            for part_id, part_range in enumerate(part_ranges):
-                part_id += 1
-                print(part_id)
-                _upload(part_id=part_id, part_range=part_range)
-                # result = executor.submit(_upload, part_id=part_id, part_range=part_range)
+            while offset < content_length:
+                chunk_size = min(multipart_chunksize, content_length - offset)
+                result = executor.submit(_upload, part_id=part_id, offset=offset)
+
                 futures.append(result)
+                part_id += 1
+                offset += multipart_chunksize
+
             for future in futures:
                 future.result()
 
         bucket.api.session.finish_large_file(
             file_id=file_id,
-            part_sha1_array=['do_not_verify' for i in part_ranges],
+            part_sha1_array=[p['contentSha1'].replace('unverified:', '')  for p in parts],
         )
 
     @handle_request
@@ -190,11 +219,10 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                validate_content=False, **kwargs):
         multipart_threshold = multipart_threshold or base.MULTIPART_THRESHOLD
         upload_source = UploadSourceFileIo(content)
-        write_intents = [b2.WriteIntent(upload_source)]
 
         try:
             if content.size > multipart_threshold:
-                self._multipart_upload(bucket_id, name, upload_source, multipart_chunksize, max_concurrency)
+                self._multipart_upload(bucket_id, name, content, multipart_chunksize, max_concurrency)
             else:
                 self._simple_upload(bucket_id, name, upload_source)
         except exception.StorageCapExceeded as err:
@@ -205,10 +233,10 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     def delete_object(self, bucket_id, name, **kwargs):
         bucket = self._get_bucket(bucket_id)
         versions = bucket.list_file_versions(name)
-        for file_, _ in versions:
+        for version in versions:
             try:
                 bucket.delete_file_version(
-                    version,
+                    version.id_,
                     name,
                 )
             except exception.FileNotPresent:
