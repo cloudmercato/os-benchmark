@@ -39,6 +39,12 @@ class MultiPart:
     def len(self):
         return self.size
 
+    def seek(self, offset):
+        real_offset = self.file_object.tell()
+        sub_offset = real_offset - self.offset + offset
+        self.file_object.seek(offset)
+        self.offset = self.offset + offset
+
 
 class MultiPartUploader:
     """Helper creating a thread pool and splitting file in several parts."""

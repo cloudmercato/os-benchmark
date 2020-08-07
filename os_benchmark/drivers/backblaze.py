@@ -143,7 +143,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         def _upload(part_id, offset, content, file_id):
             self.logger.debug('Uploading %s part %s', name, part_id)
             part = base.MultiPart(content, multipart_chunksize)
-            upload_source = UploadSourceFileIo(content)
+            upload_source = UploadSourceFileIo(part)
             result = bucket.api.session.upload_part(
                 file_id=file_id,
                 part_number=part_id,

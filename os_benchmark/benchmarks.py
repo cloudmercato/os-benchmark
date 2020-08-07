@@ -1,4 +1,5 @@
 """Benchmark modules"""
+import time
 import logging
 import statistics
 from os_benchmark import utils, errors
