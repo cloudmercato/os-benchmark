@@ -27,7 +27,7 @@ from os_benchmark.drivers import s3
 
 class Driver(s3.Driver):
     """Backblaze S3 Driver"""
-    id = 'exoscale'
+    id = 'backblaze_s3'
 
     def get_url(self, bucket_id, name, **kwargs):
         url = '%s/%s/%s' % (self.kwargs['endpoint_url'], bucket_id, name)

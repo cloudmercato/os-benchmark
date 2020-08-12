@@ -1,3 +1,3 @@
 """Run performance tests on Object Storages"""
-VERSION = (0, 5, 10)
+VERSION = (0, 5, 12)
 __version__ = '.'.join([str(i) for i in VERSION])

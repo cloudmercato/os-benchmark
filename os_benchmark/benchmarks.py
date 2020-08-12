@@ -150,7 +150,7 @@ class DownloadBenchmark(BaseBenchmark):
             self.driver.get_url(
                 bucket_id=self.bucket_id,
                 name=obj['name'],
-                bucket_name=self.bucket['name'],
+                bucket_name=self.bucket.get('name', self.bucket_id),
             )
             for obj in self.objects
         ]
