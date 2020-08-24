@@ -30,6 +30,10 @@ class DriverBucketUnfoundError(DriverError):
     """Driver bucket unfound error"""
 
 
+class DriverBucketAlreadyExistError(DriverError):
+    """Driver bucket already exist error"""
+
+
 class DriverObjectUnfoundError(DriverError):
     """Driver object unfound error"""
 

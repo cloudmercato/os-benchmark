@@ -48,7 +48,7 @@ Exoscale
 Google Cloud
 ~~~~~~~~~~~~
 
-.. automodule:: os_benchmark.drivers.google_s3
+.. automodule:: os_benchmark.drivers.google
 
 IBM
 ~~~

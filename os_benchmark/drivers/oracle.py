@@ -27,9 +27,9 @@ Configuration
     -----END RSA PRIVATE KEY-----
     '
 
-.. _oci: https://github.com/aliyun/aliyun-oss-python-sdk
-.. _`Object Storage`: https://www.alibabacloud.com/product/oss
-.. _`Oracle Cloud`: https://www.alibabacloud.com/
+.. _oci: https://github.com/oracle/oci-python-sdk
+.. _`Object Storage`: https://www.oracle.com/cloud/storage/object-storage.html
+.. _`Oracle Cloud`: https://www.oracle.com/cloud
 """
 import concurrent.futures
 from functools import wraps
