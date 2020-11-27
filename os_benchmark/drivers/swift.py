@@ -33,9 +33,11 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     @property
     def swift(self):
         if not hasattr(self, '_swift'):
-            kwargs = self.kwargs
-            kwargs.update(self.default_kwargs)
-            self._swift = swiftclient.Connection(**self.kwargs)
+            kwargs = self.default_kwargs.copy()
+            os_options = kwargs.pop('os_options', {})
+            kwargs.update(self.kwargs)
+            kwargs['os_options'].update(os_options)
+            self._swift = swiftclient.Connection(**kwargs)
         return self._swift
 
     def setup(self, **kwargs):
