@@ -65,6 +65,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             bucket = self.client.create_bucket(**params)
         except exceptions.Conflict as err:
             raise errors.DriverBucketAlreadyExistError(err)
+        bucket.make_public(True)
         return {
             'id': bucket.name,
             'name': name,
@@ -166,7 +167,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                multipart_chunksize=None, multipart_threshold=None,
                validate_content=False, acl='public-read', **kwargs):
         multipart_threshold = multipart_threshold or base.MULTIPART_THRESHOLD
-        acl = OACLS[acl]
+        oacl = OACLS[acl]
 
         params = {
             'stream': content,
@@ -175,7 +176,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             'size': content.size,
             'timeout': (self.connect_timeout, self.read_timeout),
             'num_retries': 0,
-            'predefined_acl': acl,
+            'predefined_acl': oacl,
             'if_generation_match': None,
             'if_generation_not_match': None,
             'if_metageneration_match': None,
@@ -195,6 +196,12 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                 name=name,
                 **params
             )
+
+        if acl == 'public-read':
+            bucket = storage.Bucket(self.client, bucket_id)
+            blob = storage.Blob(name=name, bucket=bucket)
+            blob.make_public()
+
         return {'name': name}
 
     def delete_object(self, bucket_id, name, **kwargs):

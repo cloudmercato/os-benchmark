@@ -28,6 +28,6 @@ class Driver(s3.Driver):
         return kwargs
 
     def get_url(self, bucket_id, name, **kwargs):
-        domain = urlparse(self.kwargs['endpoint_url']).netlooc
+        domain = urlparse(self.kwargs['endpoint_url']).netloc
         url = 'https://%s.%s/%s' % (bucket_id, domain, name)
         return url
