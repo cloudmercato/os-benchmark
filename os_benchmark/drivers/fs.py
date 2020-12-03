@@ -19,8 +19,11 @@ from os_benchmark.drivers import base
 class Driver(base.BaseDriver):
     id = 'fs'
 
-    def setup(self):
-        os.makedirs(self.path)
+    def setup(self, **kwargs):
+        try:
+            os.makedirs(self.path)
+        except FileExistsError:
+            pass
 
     @property
     def path(self):
@@ -73,12 +76,13 @@ class Driver(base.BaseDriver):
         except FileExistsError:
             pass
 
-        with open(path, 'wb') as fd:
+        mode = 'wb' if 'b' in content.mode else 'w'
+        with open(path, mode) as fd:
             shutil.copyfileobj(
                 fsrc=content,
                 fdst=fd,
             )
-        return {'name': name}
+        return name
 
     def get_url(self, bucket_id, name, **kwargs):
         path = os.path.join(self.path, bucket_id, name)
@@ -90,6 +94,10 @@ class Driver(base.BaseDriver):
         with open(path, 'rb') as fd:
             while fd.read(block_size):
                 pass
+
+    def download_stream(self, url, **kwargs):
+        path = url.replace('file://', '')
+        return open(path, 'r')
 
     def delete_object(self, bucket_id, name, **kwargs):
         bucket_path = os.path.join(self.path, bucket_id)
