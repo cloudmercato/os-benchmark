@@ -164,39 +164,51 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         offset = 0
         parts = []
 
-        create_multipart_upload_details = models.CreateMultipartUploadDetails()
+        create_multipart_upload_details = models.CreateMultipartUploadDetails(
+            object=name,
+        )
         upload_data = self.client.create_multipart_upload(
             namespace_name=self.kwargs['namespace'],
             bucket_name=bucket_id,
             create_multipart_upload_details=create_multipart_upload_details,
         )
-        upload_id = upload_data.init_multipart_upload(name).upload_id
+        upload_id = upload_data.data.upload_id
 
-        def _upload(part_id, offset):
+        def _upload(part_id, chunk_size):
             self.logger.debug('Uploading %s part %s', name, part_id)
-            part = MultiPart(content, multipart_chunksize)
-            self.client.upload_part(
+            part = MultiPart(content, chunk_size)
+            response = self.client.upload_part(
                 namespace_name=self.kwargs['namespace'],
                 bucket_name=bucket_id,
                 object_name=name,
                 upload_part_num=part_id,
                 upload_part_body=part,
+                upload_id=upload_id
             )
             self.logger.debug('Done %s part %s', name, part_id)
+            return part_id, response.headers['etag']
 
         pool_kwargs = {'max_workers': max_concurrency}
         with concurrent.futures.ThreadPoolExecutor(**pool_kwargs) as executor:
             futures = []
             while offset < content_size:
                 chunk_size = min(multipart_chunksize, content_size - offset)
-                result = executor.submit(_upload, part_id=part_id, offset=offset)
+                # result = _upload(part_id=part_id, chunk_size=chunk_size)
+                result = executor.submit(_upload, part_id=part_id, chunk_size=chunk_size)
                 futures.append(result)
                 part_id += 1
                 offset += multipart_chunksize
             for future in futures:
-                future.result()
+                part_id, etag = future.result()
+                parts.append(
+                    models.CommitMultipartUploadPartDetails(
+                        part_num=part_id, etag=etag,
+                    )
+                )
 
-        commit_multipart_upload_details = models.CommitMultipartUploadDetails()
+        commit_multipart_upload_details = models.CommitMultipartUploadDetails(
+            parts_to_commit=parts
+        )
         self.client.commit_multipart_upload(
             namespace_name=self.kwargs['namespace'],
             bucket_name=bucket_id,
@@ -220,7 +232,8 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                **kwargs):
         multipart_threshold = multipart_threshold or base.MULTIPART_THRESHOLD
         self.logger.debug('Multipart: %s > %s -> %s', content.size, multipart_threshold, content.size > multipart_threshold)
-        if content.size > multipart_threshold:
+        # if content.size > multipart_threshold:
+        if True:
             self._multipart_upload(bucket_id, name, content, multipart_chunksize, max_concurrency)
         else:
             self._simple_upload(bucket_id, name, content)
