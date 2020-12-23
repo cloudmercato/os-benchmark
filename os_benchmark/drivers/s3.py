@@ -19,6 +19,7 @@ Configuration
 All parameters except ``driver`` will be passed to ``boto3.resource``.
 """
 from functools import wraps
+from urllib.parse import urljoin
 
 import botocore
 import boto3
@@ -181,3 +182,19 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     def delete_object(self, bucket_id, name, **kwargs):
         obj = self.s3.Object(bucket_id, name)
         obj.delete()
+
+    @handle_request
+    def get_presigned_url(self, bucket_id, name, expiration=3600, **kwargs):
+        url = self.s3.meta.client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket_id, 'Key': name},
+            ExpiresIn=expiration
+        )
+        return url
+
+    def get_url(self, bucket_id, name, presigned=True, **kwargs):
+        if presigned:
+            url = self.get_presigned_url(bucket_id, name)
+        else:
+            url = urljoin(self.kwargs['endpoint_url'], '%s/%s' % (bucket_id, name))
+        return url

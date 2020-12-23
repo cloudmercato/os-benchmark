@@ -282,6 +282,7 @@ class Controller:
         self.subparser.add_argument('--storage-class', required=False)
         self.subparser.add_argument('--object-size', type=int, required=False)
         self.subparser.add_argument('--object-number', type=int, required=False)
+        self.subparser.add_argument('--presigned', action="store_true")
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.DownloadBenchmark(self.driver)
@@ -289,6 +290,7 @@ class Controller:
             storage_class=parsed_args.storage_class,
             object_size=parsed_args.object_size,
             object_number=parsed_args.object_number,
+            presigned=parsed_args.presigned,
         )
         benchmark.setup()
         benchmark.run()

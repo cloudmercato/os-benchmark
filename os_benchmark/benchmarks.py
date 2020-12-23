@@ -151,6 +151,7 @@ class DownloadBenchmark(BaseBenchmark):
                 bucket_id=self.bucket_id,
                 name=obj['name'],
                 bucket_name=self.bucket.get('name', self.bucket_id),
+                presigned=self.params['presigned']
             )
             for obj in self.objects
         ]
@@ -197,6 +198,7 @@ class DownloadBenchmark(BaseBenchmark):
             'driver': self.driver.id,
             'read_timeout': self.driver.read_timeout,
             'connect_timeout': self.driver.connect_timeout,
+            'presigned': int(self.params['presigned']),
         }
         if count > 1:
             stats.update({
