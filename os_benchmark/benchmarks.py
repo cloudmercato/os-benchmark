@@ -56,7 +56,7 @@ class UploadBenchmark(BaseBenchmark):
     def run(self, **kwargs):
         def upload_files():
             for i in range(self.params['object_number']):
-                name = utils.get_random_name()
+                name = utils.get_random_name(prefix=self.params.get('object_prefix'))
                 content = utils.get_random_content(self.params['object_size'])
 
                 self.logger.debug("Uploading object '%s'", name)
@@ -99,6 +99,7 @@ class UploadBenchmark(BaseBenchmark):
             'rate': rate,
             'object_size': size,
             'object_number': self.params['object_number'],
+            'object_prefix': self.params.get('object_prefix'),
             'multipart_threshold': self.params['multipart_threshold'],
             'multipart_chunksize': self.params['multipart_chunksize'],
             'max_concurrency': self.params['max_concurrency'],
@@ -136,7 +137,7 @@ class DownloadBenchmark(BaseBenchmark):
         )
         self.bucket_id = self.bucket['id']
         for i in range(self.params['object_number']):
-            name = utils.get_random_name()
+            name = utils.get_random_name(prefix=self.params.get('object_prefix'))
             content = utils.get_random_content(self.params['object_size'])
 
             self.logger.debug("Uploading object '%s'", name)
@@ -195,6 +196,7 @@ class DownloadBenchmark(BaseBenchmark):
             'rate': rate,
             'object_size': size,
             'object_number': self.params['object_number'],
+            'object_prefix': self.params.get('object_prefix'),
             'max_concurrency': 1,
             'multipart_threshold': 0,
             'multipart_chunksize': 0,
@@ -319,6 +321,7 @@ class AbBenchmark(DownloadBenchmark):
             'time': self.total_time,
             'object_size': self.params['object_size'],
             'object_number': self.params['object_number'],
+            'object_prefix': self.params.get('object_prefix'),
             'total_size': self.params['object_size'],
             'driver': self.driver.id,
             'presigned': int(self.params['presigned']),

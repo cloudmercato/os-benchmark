@@ -259,6 +259,7 @@ class Controller:
         self.subparser.add_argument('--storage-class', required=False)
         self.subparser.add_argument('--object-size', type=int, required=True)
         self.subparser.add_argument('--object-number', type=int, required=True)
+        self.subparser.add_argument('--object-prefix', required=False)
         self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
         self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
         self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
@@ -269,6 +270,7 @@ class Controller:
             storage_class=parsed_args.storage_class,
             object_size=parsed_args.object_size,
             object_number=parsed_args.object_number,
+            object_prefix=parsed_args.object_prefix,
             multipart_threshold=parsed_args.multipart_threshold,
             multipart_chunksize=parsed_args.multipart_chunksize,
             max_concurrency=parsed_args.max_concurrency,
@@ -283,6 +285,7 @@ class Controller:
         self.subparser.add_argument('--storage-class', required=False)
         self.subparser.add_argument('--object-size', type=int, required=False)
         self.subparser.add_argument('--object-number', type=int, required=False)
+        self.subparser.add_argument('--object-prefix', required=False)
         self.subparser.add_argument('--presigned', action="store_true")
         parsed_args = self.parser.parse_known_args()[0]
 
@@ -291,6 +294,7 @@ class Controller:
             storage_class=parsed_args.storage_class,
             object_size=parsed_args.object_size,
             object_number=parsed_args.object_number,
+            object_prefix=parsed_args.object_prefix,
             presigned=parsed_args.presigned,
         )
         benchmark.setup()
@@ -303,6 +307,7 @@ class Controller:
         self.subparser.add_argument('--storage-class', required=False)
         self.subparser.add_argument('--object-size', type=int, required=False)
         self.subparser.add_argument('--object-number', type=int, required=False)
+        self.subparser.add_argument('--object-prefix', required=False)
         self.subparser.add_argument('--presigned', action="store_true")
         self.subparser.add_argument('--concurrency', type=int, default=1)
         self.subparser.add_argument('--timelimit', type=int, default=30)
@@ -316,6 +321,7 @@ class Controller:
             storage_class=parsed_args.storage_class,
             object_size=parsed_args.object_size,
             object_number=parsed_args.object_number,
+            object_prefix=parsed_args.object_prefix,
             presigned=parsed_args.presigned,
             concurrency=parsed_args.concurrency,
             timelimit=parsed_args.timelimit,

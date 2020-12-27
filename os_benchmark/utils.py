@@ -73,11 +73,13 @@ def get_driver(config):
     return driver
 
 
-def get_random_name(size=30):
+def get_random_name(size=30, prefix=None):
     """Creates a random name"""
     name = faker.user_name()
     while len(name) < size:
         name += faker.user_name()
+    if prefix:
+        name = prefix + name
     return name[:size]
 
 
