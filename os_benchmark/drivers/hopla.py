@@ -1,3 +1,22 @@
+"""
+.. note::
+  This driver requires `python-swiftclient`_.
+
+Configuration
+~~~~~~~~~~~~~
+
+.. code-block:: yaml
+
+  ---
+  hopla:
+    driver: hopla
+    user: <username>
+    key: <password>
+    os_options:
+      project_id: <project_id>
+
+.. _python-swiftclient: https://github.com/openstack/python-swiftclient
+"""
 from os_benchmark.drivers import swift
 
 

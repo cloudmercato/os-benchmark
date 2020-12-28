@@ -25,15 +25,17 @@ Backblaze
 
 .. automodule:: os_benchmark.drivers.backblaze
 
-BSO-ST
-~~~~~~
-
-.. automodule:: os_benchmark.drivers.bso
+.. automodule:: os_benchmark.drivers.backblaze_s2
 
 Bluvalt
 ~~~~~~~
 
 .. automodule:: os_benchmark.drivers.bluvalt
+
+BSO-ST
+~~~~~~
+
+.. automodule:: os_benchmark.drivers.bso
 
 DigitalOcean
 ~~~~~~~~~~~~
@@ -50,10 +52,22 @@ Google Cloud
 
 .. automodule:: os_benchmark.drivers.google
 
+hopla.cloud
+~~~~~~~~~~~
+
+.. automodule:: os_benchmark.drivers.hopla
+
+.. automodule:: os_benchmark.drivers.hopla_s3
+
 IBM
 ~~~
 
 .. automodule:: os_benchmark.drivers.ibm
+
+IONOS
+~~~~~
+
+.. automodule:: os_benchmark.drivers.ionos
 
 Linode
 ~~~~~~
@@ -87,6 +101,10 @@ Scaleway
 
 .. automodule:: os_benchmark.drivers.scaleway
 
+UpCloud
+~~~~~~~
+
+.. automodule:: os_benchmark.drivers.upcloud
 
 Wasabi
 ~~~~~~
