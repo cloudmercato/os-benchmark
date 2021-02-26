@@ -10,6 +10,11 @@ Providers
 
 Specific provider drivers bringing quicker configuration.
 
+3DS Outscale
+~~~~~~~~~~~~
+
+.. automodule:: os_benchmark.drivers.outscale
+
 Alibaba Cloud
 ~~~~~~~~~~~~~
 
