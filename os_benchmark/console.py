@@ -257,6 +257,7 @@ class Controller:
 
     def time_upload(self):
         self.subparser.add_argument('--storage-class', required=False)
+        self.subparser.add_argument('--bucket-prefix', required=False)
         self.subparser.add_argument('--object-size', type=int, required=True)
         self.subparser.add_argument('--object-number', type=int, required=True)
         self.subparser.add_argument('--object-prefix', required=False)
@@ -268,6 +269,7 @@ class Controller:
         benchmark = benchmarks.UploadBenchmark(self.driver)
         benchmark.set_params(
             storage_class=parsed_args.storage_class,
+            bucket_prefix=parsed_args.bucket_prefix,
             object_size=parsed_args.object_size,
             object_number=parsed_args.object_number,
             object_prefix=parsed_args.object_prefix,
@@ -283,6 +285,7 @@ class Controller:
 
     def time_download(self):
         self.subparser.add_argument('--storage-class', required=False)
+        self.subparser.add_argument('--bucket-prefix', required=False)
         self.subparser.add_argument('--object-size', type=int, required=False)
         self.subparser.add_argument('--object-number', type=int, required=False)
         self.subparser.add_argument('--object-prefix', required=False)
@@ -292,6 +295,7 @@ class Controller:
         benchmark = benchmarks.DownloadBenchmark(self.driver)
         benchmark.set_params(
             storage_class=parsed_args.storage_class,
+            bucket_prefix=parsed_args.bucket_prefix,
             object_size=parsed_args.object_size,
             object_number=parsed_args.object_number,
             object_prefix=parsed_args.object_prefix,
@@ -305,6 +309,7 @@ class Controller:
 
     def ab(self):
         self.subparser.add_argument('--storage-class', required=False)
+        self.subparser.add_argument('--bucket-prefix', required=False)
         self.subparser.add_argument('--object-size', type=int, required=False)
         self.subparser.add_argument('--object-number', type=int, required=False)
         self.subparser.add_argument('--object-prefix', required=False)
@@ -319,6 +324,7 @@ class Controller:
         benchmark = benchmarks.AbBenchmark(self.driver)
         benchmark.set_params(
             storage_class=parsed_args.storage_class,
+            bucket_prefix=parsed_args.bucket_prefix,
             object_size=parsed_args.object_size,
             object_number=parsed_args.object_number,
             object_prefix=parsed_args.object_prefix,

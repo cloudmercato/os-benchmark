@@ -45,7 +45,7 @@ class UploadBenchmark(BaseBenchmark):
         self.errors = []
         self.driver.setup(**self.params)
 
-        bucket_name = utils.get_random_name()
+        bucket_name = utils.get_random_name(prefix=self.params.get('bucket_prefix'))
         self.storage_class = self.params.get('storage_class')
         self.logger.debug("Creating bucket '%s'", bucket_name)
         self.bucket = self.driver.create_bucket(
@@ -97,6 +97,7 @@ class UploadBenchmark(BaseBenchmark):
             'time': self.total_time,
             'bw': bw,
             'rate': rate,
+            'bucket_prefix': self.params.get('bucket_prefix'),
             'object_size': size,
             'object_number': self.params['object_number'],
             'object_prefix': self.params.get('object_prefix'),
@@ -128,7 +129,7 @@ class DownloadBenchmark(BaseBenchmark):
         self.timings = []
         self.errors = []
         self.objects = []
-        bucket_name = utils.get_random_name()
+        bucket_name = utils.get_random_name(prefix=self.params.get('bucket_prefix'))
         self.logger.debug("Creating bucket '%s'", bucket_name)
         self.storage_class = self.params.get('storage_class')
         self.bucket = self.driver.create_bucket(
@@ -194,6 +195,7 @@ class DownloadBenchmark(BaseBenchmark):
             'time': self.total_time,
             'bw': bw,
             'rate': rate,
+            'bucket_prefix': self.params.get('bucket_prefix'),
             'object_size': size,
             'object_number': self.params['object_number'],
             'object_prefix': self.params.get('object_prefix'),
@@ -319,6 +321,7 @@ class AbBenchmark(DownloadBenchmark):
             'timelimit': self.params['timelimit'],
             'num_requests': self.params['num_requests'],
             'time': self.total_time,
+            'bucket_prefix': self.params.get('bucket_prefix'),
             'object_size': self.params['object_size'],
             'object_number': self.params['object_number'],
             'object_prefix': self.params.get('object_prefix'),

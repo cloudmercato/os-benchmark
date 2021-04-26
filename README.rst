@@ -24,6 +24,7 @@ Benchmarks
 
 - **Upload Timing**
 - **Download Timing**
+- **Apache Benchmark**
 
 Install
 -------
