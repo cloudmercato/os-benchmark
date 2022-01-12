@@ -18,8 +18,8 @@ Configuration
     os_options: 
       tenant_id: <your_tenant_id>
       region_name: <region_id>
-      project_name: <your_project_name>
-      project_id: <you_project_id>
+      project_domain_name: <your_project_name>
+      project_domain_id: <you_project_id>
 
 .. warning::
     `tenant_name` **must** be surrounded by quotes.
