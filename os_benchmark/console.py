@@ -99,6 +99,7 @@ class Controller:
         console_handler = logging.StreamHandler()
         self.logger.addHandler(console_handler)
         self.logger.setLevel(self.verbosity)
+        console_handler.setLevel(self.verbosity)
         # Get config
         if self.main_args.config_raw:
             config = json.loads(self.main_args.config_raw)
@@ -290,6 +291,7 @@ class Controller:
         self.subparser.add_argument('--object-number', type=int, required=False)
         self.subparser.add_argument('--object-prefix', required=False)
         self.subparser.add_argument('--presigned', action="store_true")
+        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.DownloadBenchmark(self.driver)
@@ -300,6 +302,7 @@ class Controller:
             object_number=parsed_args.object_number,
             object_prefix=parsed_args.object_prefix,
             presigned=parsed_args.presigned,
+            warmup_sleep=parsed_args.warmup_sleep,
         )
         benchmark.setup()
         benchmark.run()

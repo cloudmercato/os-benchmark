@@ -3,6 +3,8 @@ import logging
 import re
 import statistics
 import subprocess
+import time
+
 from os_benchmark import utils, errors
 from os_benchmark.drivers import errors as driver_errors
 
@@ -163,6 +165,7 @@ class DownloadBenchmark(BaseBenchmark):
             )
             for obj in self.objects
         ]
+        time.sleep(self.params['warmup_sleep'])
 
     def run(self, **kwargs):
         def download_objets(urls):
@@ -209,6 +212,7 @@ class DownloadBenchmark(BaseBenchmark):
             'read_timeout': self.driver.read_timeout,
             'connect_timeout': self.driver.connect_timeout,
             'presigned': int(self.params['presigned']),
+            'warmup_sleep': self.params['warmup_sleep'],
         }
         if count > 1:
             stats.update({
