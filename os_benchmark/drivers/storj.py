@@ -140,6 +140,4 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         url = 'storj://%s/%s' % (
             bucket_id, name
         )
-        print(url)
-        # import ipdb; ipdb.set_trace()
         return url
