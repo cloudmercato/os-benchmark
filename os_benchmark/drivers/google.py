@@ -19,6 +19,7 @@ Configuration
 .. _`Google Storage`: https://cloud.google.com/storage/
 .. _`Google Cloud`: https://cloud.google.com/
 """
+import json
 import concurrent.futures
 from google.cloud import storage
 from google.cloud.client import service_account
@@ -38,14 +39,23 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     id = 'google'
 
     @property
+    def json(self):
+        if not hasattr(self, '_json'):
+            if isinstance(self.kwargs['json'], str):
+                self._json = json.loads(self.kwargs['json'])
+            else:
+                self._json = self.kwargs['json']
+        return self._json
+
+    @property
     def client(self):
         if not hasattr(self, '_client'):
             self.credentials = service_account.Credentials.from_service_account_info(
-                self.kwargs['json'],
+                self.json,
             )
             self._client = storage.Client(
                 credentials=self.credentials,
-                project=self.kwargs['json']['project_id'],
+                project=self.json['project_id'],
                 # _http=self.session,
             )
         return self._client
