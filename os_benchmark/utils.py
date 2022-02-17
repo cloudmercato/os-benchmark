@@ -95,3 +95,12 @@ def timeit(func, *args, **kwargs):
     end = time.time()
     elapsed = end - start
     return elapsed, output
+
+
+async def async_timeit(func, *args, **kwargs):
+    """Time a function"""
+    start = time.time()
+    output = await func(*args, **kwargs)
+    end = time.time()
+    elapsed = end - start
+    return elapsed, output

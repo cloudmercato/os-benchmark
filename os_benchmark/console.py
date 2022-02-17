@@ -23,6 +23,7 @@ ACTIONS = (
     'clean',
     'time-upload',
     'time-download',
+    'time-multi-download',
     'ab',
 )
 MULTIPART_THREHOLD = 64 * 2**20
@@ -303,6 +304,36 @@ class Controller:
             object_prefix=parsed_args.object_prefix,
             presigned=parsed_args.presigned,
             warmup_sleep=parsed_args.warmup_sleep,
+        )
+        benchmark.setup()
+        benchmark.run()
+        benchmark.tear_down()
+        stats = benchmark.make_stats()
+        self.print_stats(stats)
+
+    def time_multi_download(self):
+        self.subparser.add_argument('--storage-class', required=False)
+        self.subparser.add_argument('--bucket-prefix', required=False)
+        self.subparser.add_argument('--object-size', type=int, required=False)
+        self.subparser.add_argument('--object-number', type=int, required=False)
+        self.subparser.add_argument('--object-prefix', required=False)
+        self.subparser.add_argument('--presigned', action="store_true")
+        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
+        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
+        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
+        parsed_args = self.parser.parse_known_args()[0]
+
+        benchmark = benchmarks.MultiDownloadBenchmark(self.driver)
+        benchmark.set_params(
+            storage_class=parsed_args.storage_class,
+            bucket_prefix=parsed_args.bucket_prefix,
+            object_size=parsed_args.object_size,
+            object_number=parsed_args.object_number,
+            object_prefix=parsed_args.object_prefix,
+            presigned=parsed_args.presigned,
+            warmup_sleep=parsed_args.warmup_sleep,
+            multipart_chunksize=parsed_args.multipart_chunksize,
+            max_concurrency=parsed_args.max_concurrency,
         )
         benchmark.setup()
         benchmark.run()
