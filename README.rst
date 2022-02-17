@@ -24,6 +24,7 @@ Benchmarks
 
 - **Upload Timing**
 - **Download Timing**
+- **Multi-part Download Timing**
 - **Apache Benchmark**
 
 Install
@@ -60,7 +61,7 @@ Command line
   os-benchmark --help
   usage: os-benchmark [--config-file CONFIG_FILE] [--config-raw CONFIG_RAW]
                     [--config-name CONFIG_NAME] [-v {0,1,2}] [-i]
-                    {help,create-bucket,list-buckets,delete-bucket,list-objects,upload,delete-object,clean-bucket,clean,time-upload,time-download}
+                    {help,create-bucket,list-buckets,delete-bucket,list-objects,upload,delete-object,clean-bucket,clean,time-upload,time-download,time-multi-download}
                     ...
 
   positional arguments:
