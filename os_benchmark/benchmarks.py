@@ -11,6 +11,11 @@ except ImportError:
     pass
 import asyncio
 
+try:
+    from pycurlb import Curler
+except ImportError:
+    pass
+
 from os_benchmark import utils, errors
 from os_benchmark.drivers import errors as driver_errors
 
@@ -43,6 +48,51 @@ class BaseBenchmark:
     def make_stats(self):
         """Compute statistics as dict"""
         return {}
+
+
+class BaseSetupObjectsBenchmark(BaseBenchmark):
+    def setup(self):
+        self.timings = []
+        self.errors = []
+        self.objects = []
+        bucket_name = utils.get_random_name(prefix=self.params.get('bucket_prefix'))
+        self.logger.debug("Creating bucket '%s'", bucket_name)
+        self.storage_class = self.params.get('storage_class')
+        self.bucket = self.driver.create_bucket(
+            name=bucket_name,
+            storage_class=self.storage_class,
+        )
+        self.bucket_id = self.bucket['id']
+        for i in range(self.params['object_number']):
+            name = utils.get_random_name(prefix=self.params.get('object_prefix'))
+            content = utils.get_random_content(self.params['object_size'])
+
+            self.logger.debug("Uploading object '%s'", name)
+            try:
+                obj = self.driver.upload(
+                    bucket_id=self.bucket_id,
+                    storage_class=self.storage_class,
+                    name=name,
+                    content=content,
+                )
+            except driver_errors.DriverError as err:
+                self.logger.warning("Error during file uploading, tearing down the environment.")
+                self.tear_down()
+                raise
+            self.objects.append(obj)
+        self.urls = [
+            self.driver.get_url(
+                bucket_id=self.bucket_id,
+                name=obj['name'],
+                bucket_name=self.bucket.get('name', self.bucket_id),
+                presigned=self.params['presigned']
+            )
+            for obj in self.objects
+        ]
+        time.sleep(self.params['warmup_sleep'])
+
+    def tear_down(self):
+        self.driver.clean_bucket(bucket_id=self.bucket['id'])
 
 
 class UploadBenchmark(BaseBenchmark):
@@ -130,49 +180,8 @@ class UploadBenchmark(BaseBenchmark):
         return stats
 
 
-class DownloadBenchmark(BaseBenchmark):
+class DownloadBenchmark(BaseSetupObjectsBenchmark):
     """Time objects downloading"""
-
-    def setup(self):
-        self.timings = []
-        self.errors = []
-        self.objects = []
-        bucket_name = utils.get_random_name(prefix=self.params.get('bucket_prefix'))
-        self.logger.debug("Creating bucket '%s'", bucket_name)
-        self.storage_class = self.params.get('storage_class')
-        self.bucket = self.driver.create_bucket(
-            name=bucket_name,
-            storage_class=self.storage_class,
-        )
-        self.bucket_id = self.bucket['id']
-        for i in range(self.params['object_number']):
-            name = utils.get_random_name(prefix=self.params.get('object_prefix'))
-            content = utils.get_random_content(self.params['object_size'])
-
-            self.logger.debug("Uploading object '%s'", name)
-            try:
-                obj = self.driver.upload(
-                    bucket_id=self.bucket_id,
-                    storage_class=self.storage_class,
-                    name=name,
-                    content=content,
-                )
-            except driver_errors.DriverError as err:
-                self.logger.warning("Error during file uploading, tearing down the environment.")
-                self.tear_down()
-                raise
-            self.objects.append(obj)
-        self.urls = [
-            self.driver.get_url(
-                bucket_id=self.bucket_id,
-                name=obj['name'],
-                bucket_name=self.bucket.get('name', self.bucket_id),
-                presigned=self.params['presigned']
-            )
-            for obj in self.objects
-        ]
-        time.sleep(self.params['warmup_sleep'])
-
     def run(self, **kwargs):
         def download_objets(urls):
             for url in urls:
@@ -186,9 +195,6 @@ class DownloadBenchmark(BaseBenchmark):
                     self.errors.append(err)
 
         self.total_time = utils.timeit(download_objets, urls=self.urls)[0]
-
-    def tear_down(self):
-        self.driver.clean_bucket(bucket_id=self.bucket['id'])
 
     def make_stats(self):
         count = len(self.timings)
@@ -237,16 +243,9 @@ class DownloadBenchmark(BaseBenchmark):
         return stats
 
 
-class MultiDownloadBenchmark(BaseBenchmark):
+class MultiDownloadBenchmark(BaseSetupObjectsBenchmark):
     """Time objects downloading using multi-range"""
-
     def setup(self):
-        self.timings = []
-        self.errors = []
-        self.objects = []
-        bucket_name = utils.get_random_name(prefix=self.params.get('bucket_prefix'))
-        self.logger.debug("Creating bucket '%s'", bucket_name)
-        self.storage_class = self.params.get('storage_class')
         if self.params.get('multipart_chunksize'):
             self.multipart_chunksize = self.params.get('multipart_chunksize')
         elif self.params['object_size'] < (64*2**20): # 64MB
@@ -254,40 +253,7 @@ class MultiDownloadBenchmark(BaseBenchmark):
         else:
             self.multipart_chunksize = 64*2**20
         self.chunk_number = self.params['object_size'] // self.multipart_chunksize
-
-        self.bucket = self.driver.create_bucket(
-            name=bucket_name,
-            storage_class=self.storage_class,
-        )
-        self.bucket_id = self.bucket['id']
-
-        for i in range(self.params['object_number']):
-            name = utils.get_random_name(prefix=self.params.get('object_prefix'))
-            content = utils.get_random_content(self.params['object_size'])
-
-            self.logger.debug("Uploading object '%s'", name)
-            try:
-                obj = self.driver.upload(
-                    bucket_id=self.bucket_id,
-                    storage_class=self.storage_class,
-                    name=name,
-                    content=content,
-                )
-            except driver_errors.DriverError as err:
-                self.logger.warning("Error during file uploading, tearing down the environment.")
-                self.tear_down()
-                raise
-            self.objects.append(obj)
-        self.urls = [
-            self.driver.get_url(
-                bucket_id=self.bucket_id,
-                name=obj['name'],
-                bucket_name=self.bucket.get('name', self.bucket_id),
-                presigned=self.params['presigned']
-            )
-            for obj in self.objects
-        ]
-        time.sleep(self.params['warmup_sleep'])
+        super().setup()
 
     def run(self, **kwargs):
 
@@ -320,14 +286,9 @@ class MultiDownloadBenchmark(BaseBenchmark):
             'read_timeout': self.driver.read_timeout,
             'conn_timeout': self.driver.connect_timeout
         }
-        # self.total_time = utils.timeit(asyncio.run, download_objets())[0]
         def run():
             asyncio.run(download_objets())
         self.total_time = utils.timeit(run)[0]
-        # self.total_time = utils.timeit(download_objets)[0]
-
-    def tear_down(self):
-        self.driver.clean_bucket(bucket_id=self.bucket['id'])
 
     def make_stats(self):
         count = len(self.timings)
@@ -483,4 +444,83 @@ class AbBenchmark(DownloadBenchmark):
             values = [float(r[field]) for r in self.timings if r[field].isdecimal()]
             if values:
                 stats[field] = statistics.mean(values)
+        return stats
+
+
+class PycurlbBenchmark(BaseSetupObjectsBenchmark):
+    """Time request with pycurlb"""
+    timing_fields = (
+        'namelookup_time',
+        'connect_time',
+        'appconnect_time',
+        'pretransfer_time',
+        'starttransfer_time',
+        'total_time',
+        'speed_download',
+    )
+    math_func = {
+        'avg': statistics.mean,
+        'stddev': statistics.stdev,
+        'med': statistics.median,
+        'min': min,
+        'max': max,
+    }
+
+    def run(self, **kwargs):
+        curler = Curler()
+        for url in self.urls:
+            try:
+                info = curler.perform(
+                    url=url,
+                    connect_timeout=self.driver.connect_timeout,
+                    accept_timeout_ms=self.driver.read_timeout*1000,
+                    forbid_reuse=int(not self.params['keep_alive']),
+                )
+                self.timings.append(info)
+            except errors.InvalidHttpCode as err:
+                self.errors.append(err)
+
+    def _make_math(self, values, func_name):
+        func = self.math_func[func_name]
+        try:
+            return func(values)
+        except statistics.StatisticsError:
+            if func_name == 'stddev':
+                return .0
+            return values[0]
+
+    def make_stats(self):
+        count = len(self.timings)
+        error_count = len(self.errors)
+        size = self.params['object_size']
+        total_size = count * size
+        stats = {
+            'operation': 'curl',
+            'ops': count,
+            'bucket_prefix': self.params.get('bucket_prefix'),
+            'object_size': size,
+            'object_number': self.params['object_number'],
+            'object_prefix': self.params.get('object_prefix'),
+            'total_size': total_size,
+            'errors': error_count,
+            'driver': self.driver.id,
+            'read_timeout': self.driver.read_timeout,
+            'connect_timeout': self.driver.connect_timeout,
+            'presigned': int(self.params['presigned']),
+            'warmup_sleep': self.params['warmup_sleep'],
+            'keep_alive': int(self.params['keep_alive']),
+        }
+
+        for field in self.timing_fields:
+            values = [t[field] for t in self.timings]
+            for func in self.math_func:
+                key = '%s_%s' % (field, func)
+                stats[key] = self._make_math(values, func)
+
+        if error_count:
+            error_codes = set([e for e in self.errors])
+            stats.update({'error_count_%s' % e.args[1]: 0 for e in self.errors})
+            for err in self.errors:
+                key = 'error_count_%s' % err.args[1]
+                stats[key] += 1
         return stats

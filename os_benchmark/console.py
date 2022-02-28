@@ -25,6 +25,7 @@ ACTIONS = (
     'time-download',
     'time-multi-download',
     'ab',
+    'curl',
 )
 MULTIPART_THREHOLD = 64 * 2**20
 MULTIPART_CHUNKSIZE = 8 * 2**20
@@ -368,6 +369,34 @@ class Controller:
             num_requests=parsed_args.num_requests,
             keep_alive=parsed_args.keep_alive,
             source_address=parsed_args.source_address,
+        )
+        benchmark.setup()
+        benchmark.run()
+        benchmark.tear_down()
+        stats = benchmark.make_stats()
+        self.print_stats(stats)
+
+    def curl(self):
+        self.subparser.add_argument('--storage-class', required=False)
+        self.subparser.add_argument('--bucket-prefix', required=False)
+        self.subparser.add_argument('--object-size', type=int, required=False)
+        self.subparser.add_argument('--object-number', type=int, required=False)
+        self.subparser.add_argument('--object-prefix', required=False)
+        self.subparser.add_argument('--presigned', action="store_true")
+        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
+        self.subparser.add_argument('--keep-alive', action="store_true")
+        parsed_args = self.parser.parse_known_args()[0]
+
+        benchmark = benchmarks.PycurlbBenchmark(self.driver)
+        benchmark.set_params(
+            storage_class=parsed_args.storage_class,
+            bucket_prefix=parsed_args.bucket_prefix,
+            object_size=parsed_args.object_size,
+            object_number=parsed_args.object_number,
+            object_prefix=parsed_args.object_prefix,
+            presigned=parsed_args.presigned,
+            warmup_sleep=parsed_args.warmup_sleep,
+            keep_alive=parsed_args.keep_alive,
         )
         benchmark.setup()
         benchmark.run()
