@@ -415,6 +415,7 @@ class Controller:
         self.subparser.add_argument('--warmup-sleep', type=int, default=0)
         self.subparser.add_argument('--sleep-time', type=int, default=5)
         self.subparser.add_argument('--client-number', type=int, default=1)
+        self.subparser.add_argument('--delay-time', type=float, default=.25)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.VideoStreamingBenchmark(self.driver)
@@ -428,6 +429,7 @@ class Controller:
             warmup_sleep=parsed_args.warmup_sleep,
             sleep_time=parsed_args.sleep_time,
             client_number=parsed_args.client_number,
+            delay_time=parsed_args.delay_time,
         )
         benchmark.setup()
         benchmark.run()
