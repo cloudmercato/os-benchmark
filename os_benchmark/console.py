@@ -26,6 +26,7 @@ ACTIONS = (
     'time-multi-download',
     'ab',
     'curl',
+    'video-streaming',
 )
 MULTIPART_THREHOLD = 64 * 2**20
 MULTIPART_CHUNKSIZE = 8 * 2**20
@@ -397,6 +398,36 @@ class Controller:
             presigned=parsed_args.presigned,
             warmup_sleep=parsed_args.warmup_sleep,
             keep_alive=parsed_args.keep_alive,
+        )
+        benchmark.setup()
+        benchmark.run()
+        benchmark.tear_down()
+        stats = benchmark.make_stats()
+        self.print_stats(stats)
+
+    def video_streaming(self):
+        self.subparser.add_argument('--storage-class', required=False)
+        self.subparser.add_argument('--bucket-prefix', required=False)
+        self.subparser.add_argument('--object-size', type=int, required=False)
+        self.subparser.add_argument('--object-number', type=int, required=False)
+        self.subparser.add_argument('--object-prefix', required=False)
+        self.subparser.add_argument('--presigned', action="store_true")
+        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
+        self.subparser.add_argument('--sleep-time', type=int, default=5)
+        self.subparser.add_argument('--client-number', type=int, default=1)
+        parsed_args = self.parser.parse_known_args()[0]
+
+        benchmark = benchmarks.VideoStreamingBenchmark(self.driver)
+        benchmark.set_params(
+            storage_class=parsed_args.storage_class,
+            bucket_prefix=parsed_args.bucket_prefix,
+            object_size=parsed_args.object_size,
+            object_number=parsed_args.object_number,
+            object_prefix=parsed_args.object_prefix,
+            presigned=parsed_args.presigned,
+            warmup_sleep=parsed_args.warmup_sleep,
+            sleep_time=parsed_args.sleep_time,
+            client_number=parsed_args.client_number,
         )
         benchmark.setup()
         benchmark.run()

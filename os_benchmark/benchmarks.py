@@ -5,11 +5,12 @@ import statistics
 import subprocess
 import time
 
+import asyncio
+from concurrent.futures._base import TimeoutError as AsyncTimeoutError
 try:
     import aiohttp
 except ImportError:
-    pass
-import asyncio
+    aiohttp = None
 
 try:
     from pycurlb import Curler
@@ -19,6 +20,12 @@ except ImportError:
 from os_benchmark import utils, errors
 from os_benchmark.drivers import errors as driver_errors
 
+
+if aiohttp is not None:
+    ASYNC_TIMEOUT_ERRORS = (
+        AsyncTimeoutError,
+        aiohttp.client_exceptions.ServerTimeoutError
+    )
 
 class BenchmarkError(Exception):
     pass
@@ -522,5 +529,109 @@ class PycurlbBenchmark(BaseSetupObjectsBenchmark):
             stats.update({'error_count_%s' % e.args[1]: 0 for e in self.errors})
             for err in self.errors:
                 key = 'error_count_%s' % err.args[1]
+                stats[key] += 1
+        return stats
+
+
+class VideoStreamingBenchmark(BaseSetupObjectsBenchmark):
+    """Time request with pycurlb"""
+    def run(self, **kwargs):
+
+        async def download(session, url):
+            try:
+                async with session.get(url) as response:
+                    elapsed, _ = await utils.async_timeit(response.text)
+            except aiohttp.client_exceptions.ClientConnectorError as err:
+                return -1, err
+            except ASYNC_TIMEOUT_ERRORS as err:
+                return -1, err
+            return elapsed, response
+
+        async def download_objets():
+            connector = aiohttp.TCPConnector(
+                limit=self.params.get('max_concurrency'),
+            )
+            session_kwargs['connector'] = connector
+            session = aiohttp.ClientSession(**session_kwargs)
+            timings, errors = [], []
+            for url in self.urls:
+                # self.logger.warning("Download %s", url)
+                elapsed, response = await download(session, url)
+                if elapsed == -1:
+                    errors.append(response)
+                else:
+                    timings.append(elapsed)
+                await asyncio.sleep(self.params['sleep_time'])
+            await session.close()
+            connector.close()
+            return timings, errors
+
+        session_kwargs = {
+            'raise_for_status': True,
+            'read_timeout': self.driver.read_timeout,
+            'conn_timeout': self.driver.connect_timeout
+        }
+        self.timings = []
+        loop = asyncio.get_event_loop()
+        def run():
+            clients = []
+            for i in range(self.params['client_number']):
+                # self.logger.warning("Start client #%d", i)
+                clients.append(download_objets())
+            tasks = asyncio.gather(*clients)
+            results = loop.run_until_complete(tasks)
+            for timings, errors in results:
+                self.timings.extend(timings)
+                self.errors.extend(errors)
+        self.total_time = utils.timeit(run)[0]
+
+    def make_stats(self):
+        count = len(self.timings)
+        error_count = len(self.errors)
+        size = self.params['object_size']
+        total_size = count * size
+        bws = [(size/t) for t in self.timings]
+        stats = {
+            'operation': 'video_streaming',
+            'ops': count,
+            'bucket_prefix': self.params.get('bucket_prefix'),
+            'object_size': size,
+            'object_number': self.params['object_number'],
+            'object_prefix': self.params.get('object_prefix'),
+            'total_size': total_size,
+            'total_time': self.total_time,
+            'errors': error_count,
+            'driver': self.driver.id,
+            'read_timeout': self.driver.read_timeout,
+            'connect_timeout': self.driver.connect_timeout,
+            'presigned': int(self.params['presigned']),
+            'warmup_sleep': self.params['warmup_sleep'],
+            'sleep_time': int(self.params['sleep_time']),
+            'client_number': int(self.params['client_number']),
+        }
+
+        if count > 1:
+            stats.update({
+                'time_avg': statistics.mean(self.timings),
+                'time_stddev': statistics.stdev(self.timings),
+                'time_med': statistics.median(self.timings),
+                'time_min': min(self.timings),
+                'time_max': max(self.timings),
+                'bw_avg': statistics.mean(bws),
+                'bw_stddev': statistics.stdev(bws),
+                'bw_med': statistics.median(bws),
+                'bw_min': min(bws),
+                'bw_max': max(bws),
+            })
+
+        if error_count:
+            for err in self.errors:
+                if isinstance(err, aiohttp.client_exceptions.ClientConnectorError):
+                    key = 'error_client'
+                elif isinstance(err, ASYNC_TIMEOUT_ERRORS):
+                    key = 'error_timeout'
+                else:
+                    key = 'error_count_%s' % err.args[1]
+                stats.setdefault(key, 0)
                 stats[key] += 1
         return stats

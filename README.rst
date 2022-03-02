@@ -25,6 +25,8 @@ Benchmarks
 - **Upload Timing**
 - **Download Timing**
 - **Multi-part Download Timing**
+- **cURL timing**
+- **Video Streaming**
 - **Apache Benchmark**
 
 Install
