@@ -1,6 +1,8 @@
 import os
 import logging
 import time
+import math
+import statistics
 
 import yaml
 from faker import Faker
@@ -104,3 +106,10 @@ async def async_timeit(func, *args, **kwargs):
     end = time.time()
     elapsed = end - start
     return elapsed, output
+
+
+def percentile(values, percent):
+    if not values:
+        return
+    values = sorted(values)
+    return values[int(math.ceil((len(values) * percent) / 100)) - 1]

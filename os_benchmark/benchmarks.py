@@ -609,8 +609,8 @@ class VideoStreamingBenchmark(BaseSetupObjectsBenchmark):
             'object_prefix': self.params.get('object_prefix'),
             'total_size': total_size,
             'total_time': self.total_time,
-            'errors': count,
             'errors': error_count,
+            'error_timeout': 0,
             'driver': self.driver.id,
             'read_timeout': self.driver.read_timeout,
             'connect_timeout': self.driver.connect_timeout,
@@ -618,7 +618,7 @@ class VideoStreamingBenchmark(BaseSetupObjectsBenchmark):
             'warmup_sleep': self.params['warmup_sleep'],
             'sleep_time': int(self.params['sleep_time']),
             'client_number': int(self.params['client_number']),
-            'delay_time': int(self.params['delay_time']),
+            'delay_time': self.params['delay_time'],
         }
 
         if count > 1:
@@ -628,11 +628,13 @@ class VideoStreamingBenchmark(BaseSetupObjectsBenchmark):
                 'time_med': statistics.median(self.timings),
                 'time_min': min(self.timings),
                 'time_max': max(self.timings),
+                'time_perc95': utils.percentile(self.timings, 95),
                 'bw_avg': statistics.mean(bws),
                 'bw_stddev': statistics.stdev(bws),
                 'bw_med': statistics.median(bws),
                 'bw_min': min(bws),
                 'bw_max': max(bws),
+                'bw_perc95': utils.percentile(bws, 95),
             })
 
         if error_count:
