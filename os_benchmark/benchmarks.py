@@ -1,4 +1,5 @@
 """Benchmark modules"""
+import os
 import logging
 import re
 import statistics
@@ -7,6 +8,7 @@ import time
 
 import asyncio
 from concurrent.futures._base import TimeoutError as AsyncTimeoutError
+from concurrent.futures import ThreadPoolExecutor
 try:
     import aiohttp
 except ImportError:
@@ -64,14 +66,17 @@ class BaseSetupObjectsBenchmark(BaseBenchmark):
         self.errors = []
         self.objects = []
         bucket_name = utils.get_random_name(prefix=self.params.get('bucket_prefix'))
-        self.logger.debug("Creating bucket '%s'", bucket_name)
+        self.logger.info("Creating bucket '%s'", bucket_name)
         self.storage_class = self.params.get('storage_class')
         self.bucket = self.driver.create_bucket(
             name=bucket_name,
             storage_class=self.storage_class,
         )
         self.bucket_id = self.bucket['id']
-        for i in range(self.params['object_number']):
+
+        self.urls = []
+
+        def upload():
             name = utils.get_random_name(prefix=self.params.get('object_prefix'))
             content = utils.get_random_content(self.params['object_size'])
 
@@ -84,19 +89,26 @@ class BaseSetupObjectsBenchmark(BaseBenchmark):
                     content=content,
                 )
             except driver_errors.DriverError as err:
-                self.logger.warning("Error during file uploading, tearing down the environment.")
-                self.tear_down()
+                self.logger.warning("Error during file uploading, tearing down the environment: %s", err)
                 raise
             self.objects.append(obj)
-        self.urls = [
-            self.driver.get_url(
+            self.urls.append(self.driver.get_url(
                 bucket_id=self.bucket_id,
                 name=obj['name'],
                 bucket_name=self.bucket.get('name', self.bucket_id),
                 presigned=self.params['presigned']
-            )
-            for obj in self.objects
-        ]
+            ))
+
+        max_workers = os.cpu_count()
+        futures = []
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            for i in range(self.params['object_number']):
+                future = executor.submit(upload)
+                futures.append(future)
+
+        exceptions = [f.exception() for f in futures if f.exception()]
+        if exceptions:
+            raise exceptions[0]
         time.sleep(self.params['warmup_sleep'])
 
     def tear_down(self):
