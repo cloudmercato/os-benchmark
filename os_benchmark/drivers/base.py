@@ -126,6 +126,15 @@ class BaseDriver:
         """Delete object from a bucket"""
         raise NotImplementedError()
 
+    def get_bucket(self, bucket_id, **kwargs):
+        """Get a bucket properties"""
+        buckets = self.list_buckets()
+        for bucket in buckets:
+            if bucket['id'] == bucket_id:
+                return bucket
+        msg = "Bucket %s not found"
+        raise errors.DriverBucketUnfoundError(msg)
+
     def clean_bucket(self, bucket_id, delete_bucket=True):
         """Delete all object from a bucket"""
         try:
@@ -158,6 +167,7 @@ class HTTPAdapter(BaseHTTPAdapter):
         if timeout is None:
             kwargs["timeout"] = self.timeout
         return super().send(request, **kwargs)
+
 
 class RequestsMixin:
     """Mixin providing a HTTTP Session"""

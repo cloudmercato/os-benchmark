@@ -288,9 +288,10 @@ class Controller:
         self.subparser.add_argument('--object-size', type=int, required=False)
         self.subparser.add_argument('--object-number', type=int, required=False)
         self.subparser.add_argument('--object-prefix', required=False)
-        self.subparser.add_argument('--presigned', action="store_true")
         self.subparser.add_argument('--warmup-sleep', type=int, default=0)
+        self.subparser.add_argument('--presigned', action="store_true")
         self.subparser.add_argument('--keep-objects', action="store_true")
+        self.subparser.add_argument('--bucket-id', default=None)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.DownloadBenchmark(self.driver)
@@ -303,6 +304,7 @@ class Controller:
             presigned=parsed_args.presigned,
             warmup_sleep=parsed_args.warmup_sleep,
             keep_objects=parsed_args.keep_objects,
+            bucket_id=parsed_args.bucket_id,
         )
         benchmark.setup()
         benchmark.run()
@@ -321,6 +323,7 @@ class Controller:
         self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
         self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
         self.subparser.add_argument('--keep-objects', action="store_true")
+        self.subparser.add_argument('--bucket-id', default=None)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.MultiDownloadBenchmark(self.driver)
@@ -335,6 +338,7 @@ class Controller:
             multipart_chunksize=parsed_args.multipart_chunksize,
             max_concurrency=parsed_args.max_concurrency,
             keep_objects=parsed_args.keep_objects,
+            bucket_id=parsed_args.bucket_id,
         )
         benchmark.setup()
         benchmark.run()
@@ -355,6 +359,7 @@ class Controller:
         self.subparser.add_argument('--keep-alive', action="store_true")
         self.subparser.add_argument('--source-address', required=False)
         self.subparser.add_argument('--keep-objects', action="store_true")
+        self.subparser.add_argument('--bucket-id', default=None)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.AbBenchmark(self.driver)
@@ -371,6 +376,7 @@ class Controller:
             keep_alive=parsed_args.keep_alive,
             source_address=parsed_args.source_address,
             keep_objects=parsed_args.keep_objects,
+            bucket_id=parsed_args.bucket_id,
         )
         benchmark.setup()
         benchmark.run()
@@ -388,6 +394,7 @@ class Controller:
         self.subparser.add_argument('--warmup-sleep', type=int, default=0)
         self.subparser.add_argument('--keep-alive', action="store_true")
         self.subparser.add_argument('--keep-objects', action="store_true")
+        self.subparser.add_argument('--bucket-id', default=None)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.PycurlbBenchmark(self.driver)
@@ -401,6 +408,7 @@ class Controller:
             warmup_sleep=parsed_args.warmup_sleep,
             keep_alive=parsed_args.keep_alive,
             keep_objects=parsed_args.keep_objects,
+            bucket_id=parsed_args.bucket_id,
         )
         benchmark.setup()
         benchmark.run()
@@ -420,6 +428,7 @@ class Controller:
         self.subparser.add_argument('--client-number', type=int, default=1)
         self.subparser.add_argument('--delay-time', type=float, default=.25)
         self.subparser.add_argument('--keep-objects', action="store_true")
+        self.subparser.add_argument('--bucket-id', default=None)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.VideoStreamingBenchmark(self.driver)
@@ -435,6 +444,7 @@ class Controller:
             client_number=parsed_args.client_number,
             delay_time=parsed_args.delay_time,
             keep_objects=parsed_args.keep_objects,
+            bucket_id=parsed_args.bucket_id,
         )
         benchmark.setup()
         benchmark.run()

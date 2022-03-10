@@ -61,12 +61,32 @@ class BaseBenchmark:
 
 
 class BaseSetupObjectsBenchmark(BaseBenchmark):
-    def setup(self):
-        self.logger.debug("Bench params '%s'", self.params)
-        self.timings = []
-        self.errors = []
-        self.objects = []
-        bucket_name = utils.get_random_name(prefix=self.params.get('bucket_prefix'))
+    def _make_upload(self):
+        name = utils.get_random_name(prefix=self.params.get('object_prefix'))
+        content = utils.get_random_content(self.params['object_size'])
+
+        self.logger.debug("Uploading object '%s'", name)
+        try:
+            obj = self.driver.upload(
+                bucket_id=self.bucket_id,
+                storage_class=self.storage_class,
+                name=name,
+                content=content,
+            )
+        except driver_errors.DriverError as err:
+            self.logger.warning("Error during file uploading, tearing down the environment: %s", err)
+            raise
+        self.objects.append(obj)
+        self.urls.append(self.driver.get_url(
+            bucket_id=self.bucket_id,
+            name=obj['name'],
+            bucket_name=self.bucket.get('name', self.bucket_id),
+            presigned=self.params['presigned']
+        ))
+
+    def _create_bucket(self, name=None):
+        bucket_name = name or utils.get_random_name(prefix=self.params.get('bucket_prefix'))
+
         self.logger.info("Creating bucket '%s'", bucket_name)
         self.storage_class = self.params.get('storage_class')
         self.bucket = self.driver.create_bucket(
@@ -75,42 +95,53 @@ class BaseSetupObjectsBenchmark(BaseBenchmark):
         )
         self.bucket_id = self.bucket['id']
 
-        self.urls = []
-
-        def upload():
-            name = utils.get_random_name(prefix=self.params.get('object_prefix'))
-            content = utils.get_random_content(self.params['object_size'])
-
-            self.logger.debug("Uploading object '%s'", name)
-            try:
-                obj = self.driver.upload(
-                    bucket_id=self.bucket_id,
-                    storage_class=self.storage_class,
-                    name=name,
-                    content=content,
-                )
-            except driver_errors.DriverError as err:
-                self.logger.warning("Error during file uploading, tearing down the environment: %s", err)
-                raise
-            self.objects.append(obj)
-            self.urls.append(self.driver.get_url(
-                bucket_id=self.bucket_id,
-                name=obj['name'],
-                bucket_name=self.bucket.get('name', self.bucket_id),
-                presigned=self.params['presigned']
-            ))
-
-        max_workers = os.cpu_count()
+        max_workers = min(2, max(os.cpu_count(), 64))
         futures = []
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             for i in range(self.params['object_number']):
-                future = executor.submit(upload)
+                future = executor.submit(self._make_upload)
                 futures.append(future)
 
         exceptions = [f.exception() for f in futures if f.exception()]
         if exceptions:
             raise exceptions[0]
         time.sleep(self.params['warmup_sleep'])
+
+    def _reuse_bucket(self):
+        self.bucket_id = self.params['bucket_id']
+        self.logger.debug("Reuse bucket '%s'", self.bucket_id)
+        self.bucket = self.driver.get_bucket(bucket_id=self.bucket_id)
+        self.storage_class = self.params.get('storage_class') or \
+            self.bucket.get('storage_class')
+
+        self.objects = self.driver.list_objects(bucket_id=self.bucket_id)
+        for obj_name in self.objects:
+            self.urls.append(self.driver.get_url(
+                bucket_id=self.bucket_id,
+                name=obj_name,
+                bucket_name=self.bucket.get('name', self.bucket_id),
+                presigned=self.params['presigned']
+            ))
+
+    def setup(self):
+        self.logger.debug("Bench params '%s'", self.params)
+        self.timings = []
+        self.errors = []
+        self.objects = []
+
+        self.urls = []
+
+        # Re-use bucket
+        if self.params.get('bucket_id'):
+            try:
+                self._reuse_bucket()
+                if self.objects:
+                    return
+                self.logger.warning("Bucket %s is empty", self.bucket_id)
+            except driver_errors.DriverBucketUnfoundError:
+                self.logger.warning("Bucket %s not found", self.bucket_id)
+        # Or create
+        self._create_bucket(name=self.params.get('bucket_id'))
 
     def tear_down(self):
         if not self.params.get('keep_objects'):
