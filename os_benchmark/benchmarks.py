@@ -62,6 +62,7 @@ class BaseBenchmark:
 
 class BaseSetupObjectsBenchmark(BaseBenchmark):
     def setup(self):
+        self.logger.debug("Bench params '%s'", self.params)
         self.timings = []
         self.errors = []
         self.objects = []
@@ -112,12 +113,15 @@ class BaseSetupObjectsBenchmark(BaseBenchmark):
         time.sleep(self.params['warmup_sleep'])
 
     def tear_down(self):
-        self.driver.clean_bucket(bucket_id=self.bucket['id'])
+        if not self.params.get('keep_objects'):
+            self.driver.clean_bucket(bucket_id=self.bucket['id'])
 
 
 class UploadBenchmark(BaseBenchmark):
     """Time objects uploading"""
     def setup(self):
+        self.logger.debug("Bench params '%s'", self.params)
+
         self.timings = []
         self.objects = []
         self.errors = []
@@ -159,7 +163,8 @@ class UploadBenchmark(BaseBenchmark):
         self.total_time = utils.timeit(upload_files)[0]
 
     def tear_down(self):
-        self.driver.clean_bucket(bucket_id=self.bucket['id'])
+        if not self.params.get('keep_objects'):
+            self.driver.clean_bucket(bucket_id=self.bucket['id'])
 
     def make_stats(self):
         count = len(self.timings)

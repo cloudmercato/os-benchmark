@@ -165,7 +165,6 @@ class Controller:
         content_group.add_argument('--', '--from-stdin', default=False, action='store_true', dest='from_stdin')
         self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
         self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
-        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
         parsed_args = self.parser.parse_known_args()[0]
 
         name = parsed_args.name or utils.get_random_name()
@@ -262,6 +261,7 @@ class Controller:
         self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
         self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
         self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
+        self.subparser.add_argument('--keep-objects', action="store_true")
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.UploadBenchmark(self.driver)
@@ -274,6 +274,7 @@ class Controller:
             multipart_threshold=parsed_args.multipart_threshold,
             multipart_chunksize=parsed_args.multipart_chunksize,
             max_concurrency=parsed_args.max_concurrency,
+            keep_objects=parsed_args.keep_objects,
         )
         benchmark.setup()
         benchmark.run()
@@ -289,6 +290,7 @@ class Controller:
         self.subparser.add_argument('--object-prefix', required=False)
         self.subparser.add_argument('--presigned', action="store_true")
         self.subparser.add_argument('--warmup-sleep', type=int, default=0)
+        self.subparser.add_argument('--keep-objects', action="store_true")
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.DownloadBenchmark(self.driver)
@@ -300,6 +302,7 @@ class Controller:
             object_prefix=parsed_args.object_prefix,
             presigned=parsed_args.presigned,
             warmup_sleep=parsed_args.warmup_sleep,
+            keep_objects=parsed_args.keep_objects,
         )
         benchmark.setup()
         benchmark.run()
@@ -317,6 +320,7 @@ class Controller:
         self.subparser.add_argument('--warmup-sleep', type=int, default=0)
         self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
         self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
+        self.subparser.add_argument('--keep-objects', action="store_true")
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.MultiDownloadBenchmark(self.driver)
@@ -330,6 +334,7 @@ class Controller:
             warmup_sleep=parsed_args.warmup_sleep,
             multipart_chunksize=parsed_args.multipart_chunksize,
             max_concurrency=parsed_args.max_concurrency,
+            keep_objects=parsed_args.keep_objects,
         )
         benchmark.setup()
         benchmark.run()
@@ -349,6 +354,7 @@ class Controller:
         self.subparser.add_argument('--num-requests', type=int, default=100)
         self.subparser.add_argument('--keep-alive', action="store_true")
         self.subparser.add_argument('--source-address', required=False)
+        self.subparser.add_argument('--keep-objects', action="store_true")
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.AbBenchmark(self.driver)
@@ -364,6 +370,7 @@ class Controller:
             num_requests=parsed_args.num_requests,
             keep_alive=parsed_args.keep_alive,
             source_address=parsed_args.source_address,
+            keep_objects=parsed_args.keep_objects,
         )
         benchmark.setup()
         benchmark.run()
@@ -380,6 +387,7 @@ class Controller:
         self.subparser.add_argument('--presigned', action="store_true")
         self.subparser.add_argument('--warmup-sleep', type=int, default=0)
         self.subparser.add_argument('--keep-alive', action="store_true")
+        self.subparser.add_argument('--keep-objects', action="store_true")
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.PycurlbBenchmark(self.driver)
@@ -392,6 +400,7 @@ class Controller:
             presigned=parsed_args.presigned,
             warmup_sleep=parsed_args.warmup_sleep,
             keep_alive=parsed_args.keep_alive,
+            keep_objects=parsed_args.keep_objects,
         )
         benchmark.setup()
         benchmark.run()
@@ -410,6 +419,7 @@ class Controller:
         self.subparser.add_argument('--sleep-time', type=int, default=5)
         self.subparser.add_argument('--client-number', type=int, default=1)
         self.subparser.add_argument('--delay-time', type=float, default=.25)
+        self.subparser.add_argument('--keep-objects', action="store_true")
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.VideoStreamingBenchmark(self.driver)
@@ -424,6 +434,7 @@ class Controller:
             sleep_time=parsed_args.sleep_time,
             client_number=parsed_args.client_number,
             delay_time=parsed_args.delay_time,
+            keep_objects=parsed_args.keep_objects,
         )
         benchmark.setup()
         benchmark.run()
