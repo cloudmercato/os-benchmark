@@ -5,9 +5,8 @@ import os
 import sys
 import argparse
 import json
-import logging
 import os_benchmark
-from os_benchmark import utils, benchmarks, errors
+from os_benchmark import utils, benchmarks, errors, logger as logger_
 from os_benchmark.drivers import errors as driver_errors
 
 ACTIONS = (
@@ -31,8 +30,6 @@ ACTIONS = (
 MULTIPART_THREHOLD = 64 * 2**20
 MULTIPART_CHUNKSIZE = 8 * 2**20
 MAX_CONCURRENCY = os.cpu_count() * 2
-
-logger = logging.getLogger('osb')
 
 def create_parser():
     """Create main parser"""
@@ -97,12 +94,9 @@ class Controller:
         self.subparser = action_subparsers[main_action]
         self.action = main_action.replace('-', '_')
         # Logs
-        self.verbosity = 30 - (self.main_args.verbosity * 10)
-        self.logger = logger
-        console_handler = logging.StreamHandler()
-        self.logger.addHandler(console_handler)
+        self.verbosity = 40 - (self.main_args.verbosity * 10)
+        self.logger = logger_.logger
         self.logger.setLevel(self.verbosity)
-        console_handler.setLevel(self.verbosity)
         # Get config
         if self.main_args.config_raw:
             config = json.loads(self.main_args.config_raw)
@@ -457,9 +451,9 @@ def main():
         print("Stopped by user")
         sys.exit(2)
     except errors.OsbError as err:
-        if logger.level <= 0:
+        if logger_.logger.level <= 0:
             raise
-        logger.error(err)
+        logger_.logger.error(err)
         sys.exit(1)
 
 
