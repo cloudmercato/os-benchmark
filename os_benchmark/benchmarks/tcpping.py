@@ -10,12 +10,18 @@ from os_benchmark import utils, errors
 from os_benchmark.drivers import errors as driver_errors
 from . import base
 
+DEFAULT_PORTS = {
+    'http': 80,
+    'https': 443,
+}
 
-class PingBenchmark(base.BaseSetupObjectsBenchmark):
+
+class TcpPingBenchmark(base.BaseSetupObjectsBenchmark):
     """Time ping endpoint"""
-    def _ping(self, ip):
-        packet = scapy.IP(dst=ip, ttl=self.params['ttl']) / scapy.ICMP()
-        reply = scapy.sr1(
+    def _ping(self, ip, port):
+        packet = scapy.IP(dst=ip, ttl=self.params['ttl']) / \
+            scapy.TCP(dport=port, flags="S")
+        reply = scapy.sr(
             packet,
             timeout=self.params['timeout'],
             verbose=self.params['scapy_verbose'],
@@ -31,12 +37,15 @@ class PingBenchmark(base.BaseSetupObjectsBenchmark):
             bucket_name=self.bucket.get('name', self.bucket_id),
         )
         self.parsed_url = urlparse(url)
-        addr_info = socket.getaddrinfo(self.parsed_url.hostname, self.parsed_url.port)
+        self.port = self.parsed_url.port
+        if not self.port:
+            self.port = DEFAULT_PORTS[self.parsed_url.scheme]
+        addr_info = socket.getaddrinfo(self.parsed_url.hostname, self.port)
         self.ip = addr_info[0][-1][0]
         
         def ping():
             for i in range(self.params['count']):
-                elapsed, reply = utils.timeit(self._ping, self.ip)
+                elapsed, reply = utils.timeit(self._ping, self.ip, self.port)
                 if reply:
                     self.timings.append(elapsed)
                 else:
@@ -45,7 +54,7 @@ class PingBenchmark(base.BaseSetupObjectsBenchmark):
         self.total_time = utils.timeit(ping)[0]
 
     def make_stats(self):
-        count = len(self.timings)
+        count = self.params['count']
         error_count = len(self.errors)
         size = self.params['object_size']
         total_size = count * size
@@ -53,7 +62,7 @@ class PingBenchmark(base.BaseSetupObjectsBenchmark):
         bw = (total_size/test_time/2**20) if test_time else 0
         rate = (count/test_time) if test_time else 0
         stats = {
-            'operation': 'ping',
+            'operation': 'tcpping',
             'ops': count,
             'time': self.total_time,
             'rate': rate,
@@ -74,6 +83,9 @@ class PingBenchmark(base.BaseSetupObjectsBenchmark):
             'warmup_sleep': self.params['warmup_sleep'],
             'hostname': self.parsed_url.hostname,
             'ip': self.ip,
+            'port': self.port,
+            'timeout': self.params['timeout'],
+            'ttl': self.params['ttl'],
         }
         if count > 1:
             stats.update({

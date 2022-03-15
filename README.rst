@@ -30,6 +30,7 @@ Benchmarks
 - **Video Streaming**
 - **Apache Benchmark**
 - **Ping**
+- **TCP-Ping**
 
 Install
 -------
