@@ -1,9 +1,7 @@
-import scapy.all as scapy
 try:
     import scapy.all as scapy
 except ImportError:
     pass
-from os_benchmark import utils, errors
 from . import base
 
 
@@ -28,14 +26,14 @@ class TracerouteBenchmark(base.BaseNetworkBenchmark):
         
         def traceroute():
             for i in range(self.params['count']):
-                elapsed, reply = utils.timeit(self._traceroute, self.ip)
+                elapsed, reply = self.timeit(self._traceroute, self.ip)
                 if reply:
                     self.timings.append(elapsed)
                     self.replies.append(reply)
                 else:
                     self.errors.append(TimeoutError())
 
-        self.total_time = utils.timeit(traceroute)[0]
+        self.total_time = self.timeit(traceroute)[0]
 
     def make_stats(self):
         count = self.params['count']

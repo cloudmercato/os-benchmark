@@ -13,7 +13,7 @@ try:
 except ImportError:
     aiohttp = None
 
-from os_benchmark import utils, errors
+from os_benchmark import utils
 from os_benchmark.drivers import errors as driver_errors
 
 if aiohttp is not None:
@@ -86,6 +86,9 @@ class BaseBenchmark:
                 value = round(value, decimals)
             stats[key] = func(values)
         return stats
+
+    def timeit(self, *args, **kwargs):
+        return utils.timeit(*args, **kwargs)
 
 
 class BaseSetupObjectsBenchmark(BaseBenchmark):

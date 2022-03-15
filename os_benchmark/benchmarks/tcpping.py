@@ -1,22 +1,12 @@
-import socket
-from urllib.parse import urlparse
-import scapy.all as scapy
 import statistics
 try:
     import scapy.all as scapy
 except ImportError:
     pass
-from os_benchmark import utils, errors
-from os_benchmark.drivers import errors as driver_errors
 from . import base
 
-DEFAULT_PORTS = {
-    'http': 80,
-    'https': 443,
-}
 
-
-class TcpPingBenchmark(base.BaseSetupObjectsBenchmark):
+class TcpPingBenchmark(base.BaseNetworkBenchmark):
     """Time ping endpoint"""
     def _ping(self, ip, port):
         packet = scapy.IP(dst=ip, ttl=self.params['ttl']) / \
@@ -30,28 +20,16 @@ class TcpPingBenchmark(base.BaseSetupObjectsBenchmark):
 
     def run(self, **kwargs):
         self.sleep(self.params['warmup_sleep'])
-        obj = self.objects[0]
-        url = self.driver.get_url(
-            bucket_id=self.bucket_id,
-            name=obj['name'],
-            bucket_name=self.bucket.get('name', self.bucket_id),
-        )
-        self.parsed_url = urlparse(url)
-        self.port = self.parsed_url.port
-        if not self.port:
-            self.port = DEFAULT_PORTS[self.parsed_url.scheme]
-        addr_info = socket.getaddrinfo(self.parsed_url.hostname, self.port)
-        self.ip = addr_info[0][-1][0]
-        
         def ping():
             for i in range(self.params['count']):
-                elapsed, reply = utils.timeit(self._ping, self.ip, self.port)
+                elapsed, reply = self.timeit(self._ping, self.ip, self.port)
                 if reply:
                     self.timings.append(elapsed)
+                    self.replies.append(reply)
                 else:
                     self.errors.append(TimeoutError())
 
-        self.total_time = utils.timeit(ping)[0]
+        self.total_time = self.timeit(ping)[0]
 
     def make_stats(self):
         count = self.params['count']
@@ -87,12 +65,5 @@ class TcpPingBenchmark(base.BaseSetupObjectsBenchmark):
             'timeout': self.params['timeout'],
             'ttl': self.params['ttl'],
         }
-        if count > 1:
-            stats.update({
-                'avg': statistics.mean(self.timings),
-                'stddev': statistics.stdev(self.timings),
-                'med': statistics.median(self.timings),
-                'min': min(self.timings),
-                'max': max(self.timings),
-            })
+        stats.update(self._make_aggr(self.timings))
         return stats
