@@ -113,3 +113,6 @@ def percentile(values, percent):
         return
     values = sorted(values)
     return values[int(math.ceil((len(values) * percent) / 100)) - 1]
+
+def percentile95(values):
+    return percentile(values, 95)

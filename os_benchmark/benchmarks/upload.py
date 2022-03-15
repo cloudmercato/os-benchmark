@@ -1,5 +1,4 @@
-import statistics
-from os_benchmark import utils, errors
+from os_benchmark import utils
 from os_benchmark.drivers import errors as driver_errors
 from . import base
 
@@ -30,7 +29,7 @@ class UploadBenchmark(base.BaseBenchmark):
 
                 self.logger.debug("Uploading object '%s'", name)
                 try:
-                    elapsed, obj = utils.timeit(
+                    elapsed, obj = self.timeit(
                         self.driver.upload,
                         bucket_id=self.bucket['id'],
                         storage_class=self.storage_class,
@@ -47,7 +46,7 @@ class UploadBenchmark(base.BaseBenchmark):
                     self.errors.append(err)
 
 
-        self.total_time = utils.timeit(upload_files)[0]
+        self.total_time = self.timeit(upload_files)[0]
 
     def tear_down(self):
         if not self.params.get('keep_objects'):
@@ -81,12 +80,5 @@ class UploadBenchmark(base.BaseBenchmark):
             'read_timeout': self.driver.read_timeout,
             'connect_timeout': self.driver.connect_timeout,
         }
-        if count > 1:
-            stats.update({
-                'avg': statistics.mean(self.timings),
-                'stddev': statistics.stdev(self.timings),
-                'med': statistics.median(self.timings),
-                'min': min(self.timings),
-                'max': max(self.timings),
-            })
+        stats.update(self._make_aggr(self.timings))
         return stats

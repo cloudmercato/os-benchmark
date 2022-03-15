@@ -1,13 +1,9 @@
-import statistics
 import asyncio
-
 try:
     import aiohttp
 except ImportError:
     aiohttp = None
-
 from os_benchmark import utils, errors
-from os_benchmark.drivers import errors as driver_errors
 from . import base
 
 
@@ -69,7 +65,7 @@ class VideoStreamingBenchmark(base.BaseSetupObjectsBenchmark):
                 self.timings.extend(timings)
                 self.errors.extend(errs)
 
-        self.total_time = utils.timeit(run)[0]
+        self.total_time = self.timeit(run)[0]
         loop.close()
 
     def make_stats(self):
@@ -99,21 +95,8 @@ class VideoStreamingBenchmark(base.BaseSetupObjectsBenchmark):
             'delay_time': self.params['delay_time'],
         }
 
-        if count > 1:
-            stats.update({
-                'time_avg': statistics.mean(self.timings),
-                'time_stddev': statistics.stdev(self.timings),
-                'time_med': statistics.median(self.timings),
-                'time_min': min(self.timings),
-                'time_max': max(self.timings),
-                'time_perc95': utils.percentile(self.timings, 95),
-                'bw_avg': statistics.mean(bws),
-                'bw_stddev': statistics.stdev(bws),
-                'bw_med': statistics.median(bws),
-                'bw_min': min(bws),
-                'bw_max': max(bws),
-                'bw_perc95': utils.percentile(bws, 95),
-            })
+        stats.update(self._make_aggr(self.timings, 'time'))
+        stats.update(self._make_aggr(bws, 'bw', decimals=3))
 
         if error_count:
             for err in self.errors:

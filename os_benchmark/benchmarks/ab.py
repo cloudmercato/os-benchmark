@@ -1,8 +1,6 @@
 import re
 import subprocess
-import statistics
-from os_benchmark import utils, errors
-from os_benchmark.drivers import errors as driver_errors
+from os_benchmark import errors
 from . import base
 
 
@@ -87,7 +85,7 @@ class AbBenchmark(base.BaseSetupObjectsBenchmark):
                     self.errors.append(err)
 
         self.sleep(self.params['warmup_sleep'])
-        self.total_time = utils.timeit(download_objets, urls=self.urls)[0]
+        self.total_time = self.timeit(download_objets, urls=self.urls)[0]
 
     def tear_down(self):
         self.driver.clean_bucket(bucket_id=self.bucket['id'])
@@ -111,6 +109,5 @@ class AbBenchmark(base.BaseSetupObjectsBenchmark):
         }
         for field in self.timings[0]:
             values = [float(r[field]) for r in self.timings if r[field].isdecimal()]
-            if values:
-                stats[field] = statistics.mean(values)
+            stats.update(self._make_aggr(values, field))
         return stats

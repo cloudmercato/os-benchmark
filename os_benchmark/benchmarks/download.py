@@ -1,6 +1,4 @@
-import statistics
-from os_benchmark import utils, errors
-from os_benchmark.drivers import errors as driver_errors
+from os_benchmark import errors
 from . import base
 
 
@@ -10,7 +8,7 @@ class DownloadBenchmark(base.BaseSetupObjectsBenchmark):
         def download_objets(urls):
             for url in urls:
                 try:
-                    elapsed = utils.timeit(
+                    elapsed = self.timeit(
                         self.driver.download,
                         url=url,
                     )[0]
@@ -19,7 +17,7 @@ class DownloadBenchmark(base.BaseSetupObjectsBenchmark):
                     self.errors.append(err)
 
         self.sleep(self.params['warmup_sleep'])
-        self.total_time = utils.timeit(download_objets, urls=self.urls)[0]
+        self.total_time = self.timeit(download_objets, urls=self.urls)[0]
 
     def make_stats(self):
         count = len(self.timings)
@@ -51,14 +49,7 @@ class DownloadBenchmark(base.BaseSetupObjectsBenchmark):
             'presigned': int(self.params['presigned']),
             'warmup_sleep': self.params['warmup_sleep'],
         }
-        if count > 1:
-            stats.update({
-                'avg': statistics.mean(self.timings),
-                'stddev': statistics.stdev(self.timings),
-                'med': statistics.median(self.timings),
-                'min': min(self.timings),
-                'max': max(self.timings),
-            })
+        stats.update(self._make_aggr(self.timings))
         if error_count:
             error_codes = set([e for e in self.errors])
             stats.update({'error_count_%s' % e.args[1]: 0 for e in self.errors})

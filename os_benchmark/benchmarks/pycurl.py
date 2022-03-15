@@ -1,10 +1,8 @@
-import statistics
 try:
     from pycurlb import Curler
 except ImportError:
     pass
-from os_benchmark import utils, errors
-from os_benchmark.drivers import errors as driver_errors
+from os_benchmark import errors
 from . import base
 
 
@@ -19,13 +17,6 @@ class PycurlbBenchmark(base.BaseSetupObjectsBenchmark):
         'total_time',
         'speed_download',
     )
-    math_func = {
-        'avg': statistics.mean,
-        'stddev': statistics.stdev,
-        'med': statistics.median,
-        'min': min,
-        'max': max,
-    }
 
     def run(self, **kwargs):
         self.sleep(self.params['warmup_sleep'])
@@ -34,22 +25,13 @@ class PycurlbBenchmark(base.BaseSetupObjectsBenchmark):
             try:
                 info = curler.perform(
                     url=url,
-                    connect_timeout=self.driver.connect_timeout,
-                    accept_timeout_ms=self.driver.read_timeout*1000,
+                    connect_timeout=int(self.driver.connect_timeout),
+                    accept_timeout_ms=int(self.driver.read_timeout*1000),
                     forbid_reuse=int(not self.params['keep_alive']),
                 )
                 self.timings.append(info)
             except errors.InvalidHttpCode as err:
                 self.errors.append(err)
-
-    def _make_math(self, values, func_name):
-        func = self.math_func[func_name]
-        try:
-            return func(values)
-        except statistics.StatisticsError:
-            if func_name == 'stddev':
-                return .0
-            return values[0]
 
     def make_stats(self):
         count = len(self.timings)
@@ -75,9 +57,7 @@ class PycurlbBenchmark(base.BaseSetupObjectsBenchmark):
 
         for field in self.timing_fields:
             values = [t[field] for t in self.timings]
-            for func in self.math_func:
-                key = '%s_%s' % (field, func)
-                stats[key] = self._make_math(values, func)
+            stats.update(self._make_aggr(values, field))
 
         if error_count:
             error_codes = set([e for e in self.errors])

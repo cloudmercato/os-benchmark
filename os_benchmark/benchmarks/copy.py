@@ -1,6 +1,5 @@
 import statistics
-from os_benchmark import utils, errors
-from os_benchmark.drivers import errors as driver_errors
+from os_benchmark import utils
 from . import base
 
 
@@ -26,7 +25,7 @@ class CopyBenchmark(base.BaseSetupObjectsBenchmark):
         def copy_objets(objs):
             for obj in objs:
                 try:
-                    elapsed = utils.timeit(
+                    elapsed = self.timeit(
                         self.driver.copy_object,
                         bucket_id=self.bucket_id,
                         name=obj['name'],
@@ -37,7 +36,7 @@ class CopyBenchmark(base.BaseSetupObjectsBenchmark):
                 except errors.InvalidHttpCode as err:
                     self.errors.append(err)
 
-        self.total_time = utils.timeit(copy_objets, objs=self.objects)[0]
+        self.total_time = self.timeit(copy_objets, objs=self.objects)[0]
 
     def make_stats(self):
         count = len(self.timings)
@@ -68,14 +67,7 @@ class CopyBenchmark(base.BaseSetupObjectsBenchmark):
             'connect_timeout': self.driver.connect_timeout,
             'warmup_sleep': self.params['warmup_sleep'],
         }
-        if count > 1:
-            stats.update({
-                'avg': statistics.mean(self.timings),
-                'stddev': statistics.stdev(self.timings),
-                'med': statistics.median(self.timings),
-                'min': min(self.timings),
-                'max': max(self.timings),
-            })
+        stats.update(self._make_aggr(self.timings))
         if error_count:
             error_codes = set([e for e in self.errors])
             stats.update({'error_count_%s' % e.args[1]: 0 for e in self.errors})

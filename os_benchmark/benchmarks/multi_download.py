@@ -1,12 +1,10 @@
-import statistics
 import asyncio
 try:
     import aiohttp
 except ImportError:
     aiohttp = None
 
-from os_benchmark import utils, errors
-from os_benchmark.drivers import errors as driver_errors
+from os_benchmark import utils
 from . import base
 
 
@@ -89,14 +87,7 @@ class MultiDownloadBenchmark(base.BaseSetupObjectsBenchmark):
             'presigned': int(self.params['presigned']),
             'warmup_sleep': self.params['warmup_sleep'],
         }
-        if count > 1:
-            stats.update({
-                'avg': statistics.mean(self.timings),
-                'stddev': statistics.stdev(self.timings),
-                'med': statistics.median(self.timings),
-                'min': min(self.timings),
-                'max': max(self.timings),
-            })
+        stats.update(self._make_aggr(self.timings))
         if error_count:
             error_codes = set([e for e in self.errors])
             stats.update({'error_count_%s' % e.args[1]: 0 for e in self.errors})

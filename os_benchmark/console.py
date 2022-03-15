@@ -403,6 +403,7 @@ class Controller:
         self.subparser.add_argument('--object-number', type=int, required=False)
         self.subparser.add_argument('--object-prefix', required=False)
         self.subparser.add_argument('--presigned', action="store_true")
+        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
         self.subparser.add_argument('--concurrency', type=int, default=1)
         self.subparser.add_argument('--timelimit', type=int, default=30)
         self.subparser.add_argument('--num-requests', type=int, default=100)
@@ -420,6 +421,7 @@ class Controller:
             object_number=parsed_args.object_number,
             object_prefix=parsed_args.object_prefix,
             presigned=parsed_args.presigned,
+            warmup_sleep=parsed_args.warmup_sleep,
             concurrency=parsed_args.concurrency,
             timelimit=parsed_args.timelimit,
             num_requests=parsed_args.num_requests,

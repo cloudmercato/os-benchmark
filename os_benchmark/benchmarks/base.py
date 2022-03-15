@@ -34,6 +34,7 @@ AGGR_FUNCS = {
     'med': statistics.median,
     'min': min,
     'max': max,
+    'perc95': utils.percentile95
 }
 
 
@@ -82,9 +83,9 @@ class BaseBenchmark:
             value = func(values)
             if decimals == 0:
                 value = int(value)
-            elif value > 0:
+            elif decimals is not None and decimals > 0:
                 value = round(value, decimals)
-            stats[key] = func(values)
+            stats[key] = value
         return stats
 
     def timeit(self, *args, **kwargs):
