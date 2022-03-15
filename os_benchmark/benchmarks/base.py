@@ -1,6 +1,9 @@
 import os
 import logging
 import time
+import socket
+from urllib.parse import urlparse
+import statistics
 
 import asyncio
 from concurrent.futures._base import TimeoutError as AsyncTimeoutError
@@ -19,6 +22,19 @@ if aiohttp is not None:
         AsyncTimeoutError,
         aiohttp.client_exceptions.ServerTimeoutError
     )
+
+DEFAULT_PORTS = {
+    'http': 80,
+    'https': 443,
+}
+
+AGGR_FUNCS = {
+    'avg': statistics.mean,
+    'stddev': statistics.stdev,
+    'med': statistics.median,
+    'min': min,
+    'max': max,
+}
 
 
 class BenchmarkError(Exception):
@@ -53,6 +69,23 @@ class BaseBenchmark:
     def make_stats(self):
         """Compute statistics as dict"""
         return {}
+
+    def _make_aggr(self, values, name=None, decimals=None):
+        stats = {}
+        if not values:
+            return stats
+
+        if len(values) == 1:  # Lazy compute
+            values *= 2
+        for func_name, func in AGGR_FUNCS.items():
+            key = '%s_%s' % (name, func_name) if name else func_name
+            value = func(values)
+            if decimals == 0:
+                value = int(value)
+            elif value > 0:
+                value = round(value, decimals)
+            stats[key] = func(values)
+        return stats
 
 
 class BaseSetupObjectsBenchmark(BaseBenchmark):
@@ -140,3 +173,22 @@ class BaseSetupObjectsBenchmark(BaseBenchmark):
     def tear_down(self):
         if not self.params.get('keep_objects'):
             self.driver.clean_bucket(bucket_id=self.bucket['id'])
+
+
+class BaseNetworkBenchmark(BaseSetupObjectsBenchmark):
+    def setup(self):
+        super().setup()
+        self.obj = self.objects[0]
+        url = self.driver.get_url(
+            bucket_id=self.bucket_id,
+            name=self.obj['name'],
+            bucket_name=self.bucket.get('name', self.bucket_id),
+        )
+        self.parsed_url = urlparse(url)
+        self.port = self.parsed_url.port
+        if not self.port:
+            self.port = DEFAULT_PORTS[self.parsed_url.scheme]
+        self.addr_info = socket.getaddrinfo(self.parsed_url.hostname, self.port)
+        self.ip = self.addr_info[0][-1][0]
+
+        self.replies = []

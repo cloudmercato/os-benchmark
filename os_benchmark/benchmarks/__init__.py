@@ -8,3 +8,4 @@ from .video_streaming import VideoStreamingBenchmark
 from .copy import CopyBenchmark
 from .ping import PingBenchmark
 from .tcpping import TcpPingBenchmark
+from .traceroute import TracerouteBenchmark

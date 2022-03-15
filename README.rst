@@ -31,6 +31,7 @@ Benchmarks
 - **Apache Benchmark**
 - **Ping**
 - **TCP-Ping**
+- **Traceroute**
 
 Install
 -------
