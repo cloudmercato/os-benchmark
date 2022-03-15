@@ -126,6 +126,10 @@ class BaseDriver:
         """Delete object from a bucket"""
         raise NotImplementedError()
 
+    def copy_object(self, bucket_id, name, dst_bucket_id, dst_name, **kwargs):
+        """Copy object to another bucket"""
+        raise NotImplementedError()
+
     def get_bucket(self, bucket_id, **kwargs):
         """Get a bucket properties"""
         buckets = self.list_buckets()

@@ -184,6 +184,21 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         obj.delete()
 
     @handle_request
+    def copy_object(self, bucket_id, name, dst_bucket_id, dst_name, **kwargs):
+        copy_source = {
+            'Bucket': bucket_id,
+            'Key': name,
+        }
+        extra_args = {}
+        obj = self.s3.meta.client.copy(
+            CopySource=copy_source,
+            Bucket=dst_bucket_id,
+            Key=dst_name,
+            ExtraArgs=extra_args,
+        )
+        return obj
+
+    @handle_request
     def get_presigned_url(self, bucket_id, name, expiration=3600, **kwargs):
         url = self.s3.meta.client.generate_presigned_url(
             'get_object',

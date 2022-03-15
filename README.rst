@@ -22,9 +22,10 @@ Features
 Benchmarks
 ~~~~~~~~~~
 
-- **Upload Timing**
-- **Download Timing**
-- **Multi-part Download Timing**
+- **Upload timing**
+- **Download timing**
+- **Multi-part Download timing**
+- **Copy timing**
 - **cURL timing**
 - **Video Streaming**
 - **Apache Benchmark**
