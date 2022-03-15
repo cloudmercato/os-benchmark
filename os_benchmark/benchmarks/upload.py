@@ -1,0 +1,92 @@
+import statistics
+from os_benchmark import utils, errors
+from os_benchmark.drivers import errors as driver_errors
+from . import base
+
+
+class UploadBenchmark(base.BaseBenchmark):
+    """Time objects uploading"""
+    def setup(self):
+        self.logger.debug("Bench params '%s'", self.params)
+
+        self.timings = []
+        self.objects = []
+        self.errors = []
+        self.driver.setup(**self.params)
+
+        bucket_name = utils.get_random_name(prefix=self.params.get('bucket_prefix'))
+        self.storage_class = self.params.get('storage_class')
+        self.logger.debug("Creating bucket '%s'", bucket_name)
+        self.bucket = self.driver.create_bucket(
+            name=bucket_name,
+            storage_class=self.storage_class,
+        )
+
+    def run(self, **kwargs):
+        def upload_files():
+            for i in range(self.params['object_number']):
+                name = utils.get_random_name(prefix=self.params.get('object_prefix'))
+                content = utils.get_random_content(self.params['object_size'])
+
+                self.logger.debug("Uploading object '%s'", name)
+                try:
+                    elapsed, obj = utils.timeit(
+                        self.driver.upload,
+                        bucket_id=self.bucket['id'],
+                        storage_class=self.storage_class,
+                        name=name,
+                        content=content,
+                        multipart_threshold=self.params['multipart_threshold'],
+                        multipart_chunksize=self.params['multipart_chunksize'],
+                        max_concurrency=self.params['max_concurrency'],
+                    )
+                    self.timings.append(elapsed)
+                    self.objects.append(obj)
+                except driver_errors.DriverConnectionError as err:
+                    self.logger.error(err)
+                    self.errors.append(err)
+
+
+        self.total_time = utils.timeit(upload_files)[0]
+
+    def tear_down(self):
+        if not self.params.get('keep_objects'):
+            self.driver.clean_bucket(bucket_id=self.bucket['id'])
+
+    def make_stats(self):
+        count = len(self.timings)
+        error_count = len(self.errors)
+        size = self.params['object_size']
+        total_size = count * size
+        test_time = sum(self.timings)
+        rate = (count/test_time) if test_time else 0
+        bw = (total_size/test_time/2**20) if test_time else 0
+        stats = {
+            'operation': 'upload',
+            'ops': count,
+            'time': self.total_time,
+            'bw': bw,
+            'rate': rate,
+            'bucket_prefix': self.params.get('bucket_prefix'),
+            'object_size': size,
+            'object_number': self.params['object_number'],
+            'object_prefix': self.params.get('object_prefix'),
+            'multipart_threshold': self.params['multipart_threshold'],
+            'multipart_chunksize': self.params['multipart_chunksize'],
+            'max_concurrency': self.params['max_concurrency'],
+            'total_size': total_size,
+            'test_time': test_time,
+            'errors': error_count,
+            'driver': self.driver.id,
+            'read_timeout': self.driver.read_timeout,
+            'connect_timeout': self.driver.connect_timeout,
+        }
+        if count > 1:
+            stats.update({
+                'avg': statistics.mean(self.timings),
+                'stddev': statistics.stdev(self.timings),
+                'med': statistics.median(self.timings),
+                'min': min(self.timings),
+                'max': max(self.timings),
+            })
+        return stats
