@@ -53,6 +53,8 @@ def handle_request(method):
             if code == 'InvalidAccessKeyId':
                 msg += " (endpoint: %s)" % self.s3.meta.client._endpoint.host
                 raise errors.DriverAuthenticationError(msg)
+            if code == 'NoSuchBucket':
+                raise errors.DriverBucketUnfoundError(msg)
             raise
     return _handle_request
 
@@ -190,12 +192,23 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             'Key': name,
         }
         extra_args = {}
-        obj = self.s3.meta.client.copy(
-            CopySource=copy_source,
-            Bucket=dst_bucket_id,
-            Key=dst_name,
-            ExtraArgs=extra_args,
-        )
+        try:
+            obj = self.s3.meta.client.copy(
+                CopySource=copy_source,
+                Bucket=dst_bucket_id,
+                Key=dst_name,
+                ExtraArgs=extra_args,
+            )
+        except botocore.exceptions.ClientError as err:
+            code = err.response['Error']['Code']
+            if code == '404':
+                amz_code = err.response['ResponseMetadata']['HTTPHeaders']['x-amz-error-code']
+                msg = err.response['ResponseMetadata']['HTTPHeaders']['x-amz-error-message']
+                if amz_code == 'NoSuchBucket':
+                    msg = '%s %s' % (msg, bucket_id)
+                    raise errors.DriverBucketUnfoundError(msg)
+                raise errors.DriverObjectUnfoundError(msg)
+            raise
         return obj
 
     @handle_request

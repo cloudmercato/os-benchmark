@@ -136,8 +136,17 @@ class BaseDriver:
         for bucket in buckets:
             if bucket['id'] == bucket_id:
                 return bucket
-        msg = "Bucket %s not found"
+        msg = "Bucket %s not found" % bucket_id
         raise errors.DriverBucketUnfoundError(msg)
+
+    def get_object(self, bucket_id, name, **kwargs):
+        """Get an object properties"""
+        objs = self.list_objects(bucket_id=bucket_id, **kwargs)
+        for obj in objs:
+            if obj['name'] == name:
+                return obj
+        msg = "Object %s/%s not found" % (bucket_id, name)
+        raise errors.DriverObjectUnfoundError(msg)
 
     def clean_bucket(self, bucket_id, delete_bucket=True):
         """Delete all object from a bucket"""

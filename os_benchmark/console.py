@@ -18,6 +18,7 @@ ACTIONS = (
     'upload',
     'download',
     'delete-object',
+    'copy-object',
     'clean-bucket',
     'clean',
     'time-upload',
@@ -232,6 +233,20 @@ class Controller:
         self.driver.delete_object(
             bucket_id=parsed_args.bucket_id,
             name=parsed_args.name,
+        )
+
+    def copy_object(self):
+        self.subparser.add_argument('bucket_id')
+        self.subparser.add_argument('name')
+        self.subparser.add_argument('dst_bucket_id')
+        self.subparser.add_argument('dst_name')
+        parsed_args = self.parser.parse_known_args()[0]
+
+        self.driver.copy_object(
+            bucket_id=parsed_args.bucket_id,
+            name=parsed_args.name,
+            dst_bucket_id=parsed_args.dst_bucket_id,
+            dst_name=parsed_args.dst_name,
         )
 
     def clean_bucket(self):
