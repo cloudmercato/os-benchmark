@@ -6,7 +6,8 @@ import sys
 import argparse
 import json
 import os_benchmark
-from os_benchmark import utils, benchmarks, errors, logger as logger_
+from os_benchmark import logger as logger_
+from os_benchmark import utils, benchmarks, errors
 from os_benchmark.drivers import errors as driver_errors
 
 ACTIONS = (
@@ -28,6 +29,7 @@ ACTIONS = (
     'ab',
     'curl',
     'video-streaming',
+    'ping',
 )
 MULTIPART_THREHOLD = 64 * 2**20
 MULTIPART_CHUNKSIZE = 8 * 2**20
@@ -491,6 +493,40 @@ class Controller:
             delay_time=parsed_args.delay_time,
             keep_objects=parsed_args.keep_objects,
             bucket_id=parsed_args.bucket_id,
+        )
+        benchmark.setup()
+        benchmark.run()
+        benchmark.tear_down()
+        stats = benchmark.make_stats()
+        self.print_stats(stats)
+
+    def ping(self):
+        self.subparser.add_argument('--storage-class', required=False)
+        self.subparser.add_argument('--object-size', type=int, default=1)
+        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
+        self.subparser.add_argument('--keep-objects', action="store_true")
+        self.subparser.add_argument('--bucket-id', default=None)
+        self.subparser.add_argument('--ttl', type=int, default=120)
+        self.subparser.add_argument('--timeout', type=int, default=5)
+        self.subparser.add_argument('--count', type=int, default=5)
+        self.subparser.add_argument('--scapy-verbose', type=int, choices=(0, 1, 2), default=0)
+        parsed_args = self.parser.parse_known_args()[0]
+
+        benchmark = benchmarks.PingBenchmark(self.driver)
+        benchmark.set_params(
+            storage_class=parsed_args.storage_class,
+            bucket_prefix='',
+            object_size=parsed_args.object_size,
+            object_number=1,
+            object_prefix='',
+            presigned=False,
+            warmup_sleep=parsed_args.warmup_sleep,
+            keep_objects=parsed_args.keep_objects,
+            bucket_id=parsed_args.bucket_id,
+            ttl=parsed_args.ttl,
+            timeout=parsed_args.timeout,
+            count=parsed_args.count,
+            scapy_verbose=parsed_args.scapy_verbose,
         )
         benchmark.setup()
         benchmark.run()

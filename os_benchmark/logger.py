@@ -8,3 +8,5 @@ handler.setFormatter(formatter)
 logger = logging.getLogger('osb')
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
+
+logging.getLogger("scapy").setLevel(logging.CRITICAL)

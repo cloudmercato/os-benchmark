@@ -6,3 +6,4 @@ from .ab import AbBenchmark
 from .pycurl import PycurlbBenchmark
 from .video_streaming import VideoStreamingBenchmark
 from .copy import CopyBenchmark
+from .ping import PingBenchmark

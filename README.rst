@@ -29,6 +29,7 @@ Benchmarks
 - **cURL timing**
 - **Video Streaming**
 - **Apache Benchmark**
+- **Ping**
 
 Install
 -------
