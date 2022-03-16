@@ -32,6 +32,7 @@ Benchmarks
 - **Ping**
 - **TCP-Ping**
 - **Traceroute**
+- **TCP-Traceroute**
 
 Install
 -------

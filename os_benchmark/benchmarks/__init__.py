@@ -9,3 +9,4 @@ from .copy import CopyBenchmark
 from .ping import PingBenchmark
 from .tcpping import TcpPingBenchmark
 from .traceroute import TracerouteBenchmark
+from .tcptraceroute import TcpTracerouteBenchmark
