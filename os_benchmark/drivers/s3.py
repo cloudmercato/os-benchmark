@@ -75,6 +75,10 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         # 'proxies': proxies,
     }
 
+    def set_backend_logger(self, verbosity):
+        if verbosity == 4:
+            boto3.set_stream_logger('botocore')
+
     @property
     def s3(self):
         if not hasattr(self, '_s3'):

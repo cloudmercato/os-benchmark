@@ -72,7 +72,7 @@ def create_parser():
     parser.add_argument(
         '-v', '--verbosity',
         default=0, required=False, type=int,
-        choices=(0, 1, 2, 3),
+        choices=(0, 1, 2, 3, 4),
         help="Verbosity level; 0=minimal output, 1=normal output 2=verbose output 3=still more",
     )
     parser.add_argument(
@@ -101,7 +101,7 @@ class Controller:
         self.subparser = action_subparsers[main_action]
         self.action = main_action.replace('-', '_')
         # Logs
-        self.verbosity = 40 - (self.main_args.verbosity * 10)
+        self.verbosity = 40 - (min(self.main_args.verbosity, 3) * 10)
         self.logger = logger_.logger
         self.logger.setLevel(self.verbosity)
         # Get config
@@ -120,6 +120,7 @@ class Controller:
         config['connect_timeout'] = self.main_args.connect_timeout
         # Get driver
         self.driver = utils.get_driver(config)
+        self.driver.set_backend_logger(self.main_args.verbosity)
 
     def run(self):
         func = getattr(self, self.action)

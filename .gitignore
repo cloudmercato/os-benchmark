@@ -1,6 +1,6 @@
 venv
 __pycache__
-os_benchmark.egg-info/
+*.egg-info/
 *.sw[pon]
 dist/
 build

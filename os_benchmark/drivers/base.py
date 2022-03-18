@@ -87,6 +87,9 @@ class BaseDriver:
         self.kwargs = self._validate_kwargs(kwargs)
         self.logger = logging.getLogger('osb.driver')
 
+    def set_backend_logger(self, level):
+        """Set logging level for underlyng library"""
+
     def setup(self, **kwargs):
         """Initialiaze driver before benchmark"""
 
