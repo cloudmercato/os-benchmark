@@ -21,23 +21,26 @@ class PycurlbBenchmark(base.BaseSetupObjectsBenchmark):
     def run(self, **kwargs):
         self.sleep(self.params['warmup_sleep'])
         curler = Curler()
-        for url in self.urls:
-            try:
-                info = curler.perform(
-                    url=url,
-                    connect_timeout=int(self.driver.connect_timeout),
-                    accept_timeout_ms=int(self.driver.read_timeout*1000),
-                    forbid_reuse=int(not self.params['keep_alive']),
-                )
-                self.timings.append(info)
-            except errors.InvalidHttpCode as err:
-                self.errors.append(err)
+        def curl():
+            for url in self.urls:
+                try:
+                    info = curler.perform(
+                        url=url,
+                        connect_timeout=int(self.driver.connect_timeout),
+                        accept_timeout_ms=int(self.driver.read_timeout*1000),
+                        forbid_reuse=int(not self.params['keep_alive']),
+                    )
+                    self.timings.append(info)
+                except errors.InvalidHttpCode as err:
+                    self.errors.append(err)
+        self.total_time = self.timeit(curl)[0]
 
     def make_stats(self):
         count = len(self.timings)
         error_count = len(self.errors)
         size = self.params['object_size']
         total_size = count * size
+        test_time = sum([t['total_time'] for t in self.timings])
         stats = {
             'operation': 'curl',
             'ops': count,
@@ -46,6 +49,7 @@ class PycurlbBenchmark(base.BaseSetupObjectsBenchmark):
             'object_number': self.params['object_number'],
             'object_prefix': self.params.get('object_prefix'),
             'total_size': total_size,
+            'time': self.total_time,
             'errors': error_count,
             'driver': self.driver.id,
             'read_timeout': self.driver.read_timeout,
@@ -53,6 +57,7 @@ class PycurlbBenchmark(base.BaseSetupObjectsBenchmark):
             'presigned': int(self.params['presigned']),
             'warmup_sleep': self.params['warmup_sleep'],
             'keep_alive': int(self.params['keep_alive']),
+            'test_time': test_time,
         }
 
         for field in self.timing_fields:
