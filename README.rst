@@ -109,6 +109,15 @@ Test example: File uploading
   max             0.744637
 
 
+Network tests configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+On linux based OS, if you use a non-root user, it must be allowed to create sockets.
+Please use sudo or the following command to allow your user:::
+
+  setcap cap_net_raw=eip $(readlink -f $(which python))
+
+
 Contribute
 ----------
 
