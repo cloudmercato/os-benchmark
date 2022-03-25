@@ -105,7 +105,7 @@ class BaseDriver:
         """Create a bucket"""
         raise NotImplementedError()
 
-    def delete_bucket(self, bucket_id):
+    def delete_bucket(self, bucket_id, **kwargs):
         """Delete a bucket"""
         raise NotImplementedError()
 
@@ -129,6 +129,14 @@ class BaseDriver:
         """Delete object from a bucket"""
         raise NotImplementedError()
 
+    def prepare_delete_objects(self, names, **kwargs):
+        """Prepare the formating of request"""
+        return names
+
+    def delete_objects(self, bucket_id, names, **kwargs):
+        """Delete multiple objects from a bucket"""
+        raise NotImplementedError()
+
     def copy_object(self, bucket_id, name, dst_bucket_id, dst_name, **kwargs):
         """Copy object to another bucket"""
         raise NotImplementedError()
@@ -146,24 +154,150 @@ class BaseDriver:
         """Get an object properties"""
         objs = self.list_objects(bucket_id=bucket_id, **kwargs)
         for obj in objs:
-            if obj['name'] == name:
+            if obj == name:
                 return obj
         msg = "Object %s/%s not found" % (bucket_id, name)
         raise errors.DriverObjectUnfoundError(msg)
 
-    def clean_bucket(self, bucket_id, delete_bucket=True):
-        """Delete all object from a bucket"""
+    def test_object_exists(self, bucket_id, name, check_version=False,
+                           **kwargs):
+        """Check if object exists or not"""
+        exists = False
+        try:
+            self.get_object(bucket_id=bucket_id, name=name)
+            exists = True
+        except errors.DriverObjectUnfoundError:
+            pass
+        if check_version:
+            versions = self.list_object_versions(bucket_id=bucket_id, name=name)
+            if versions:
+                exists = True
+        return exists
+
+    def put_object_tags(self, bucket_id, name, tags, **kwargs):
+        """Add a tag to an object"""
+        msg = "Object tagging not implemented by driver."
+        raise NotImplementedError()
+
+    def list_object_tags(self, bucket_id, name, **kwargs):
+        """List an object's tags"""
+        raise NotImplementedError()
+
+    def list_objects_versions(self, bucket_id, **kwargs):
+        """List all objects' versions"""
+        raise NotImplementedError()
+
+    def list_object_versions(self, bucket_id, name, **kwargs):
+        """List all object' versions"""
+        all_versions = self.list_objects_versions(bucket_id=bucket_id, **kwargs)
+        versions = []
+        for version in all_versions:
+            if version['name'] == name:
+                versions.append(version)
+        return versions
+
+    def remove_object_tags(self, bucket_id, name, tags, **kwargs):
+        """Remove a tag to an object"""
+        raise NotImplementedError()
+
+    def put_object_lock(self, bucket_id, name, **kwargs):
+        """Add a lock to an object"""
+        raise NotImplementedError()
+
+    def remove_object_lock(self, bucket_id, name, **kwargs):
+        """Remove a lock to an object"""
+        raise NotImplementedError()
+
+    def get_object_torrent(self, bucket_id, name, **kwargs):
+        """Get an object's torrent"""
+        raise NotImplementedError()
+
+    def list_multipart_uploads(self, bucket_id, **kwargs):
+        """List multipart uploads in a bucket"""
+        raise NotImplementedError()
+
+    def list_delete_markers(self, bucket_id, **kwargs):
+        """List delete markers in a bucket"""
+        raise NotImplementedError()
+
+    def delete_multipart_upload(self, bucket_id, name, upload_id, **kwargs):
+        """Abort a multipart upload"""
+        raise NotImplementedError()
+
+    def clean_bucket(self, bucket_id, delete_bucket=True, skip_lock=None):
+        """
+        Delete all object, version, multipart and delete markers from a bucket.
+        By default, it removes also the bucket itself.
+        """
+        self.clean_bucket_objects(bucket_id=bucket_id, skip_lock=skip_lock)
+        self.clean_bucket_versions(bucket_id=bucket_id)
+        self.clean_bucket_delete_markers(bucket_id=bucket_id)
+        self.clean_bucket_multiparts(bucket_id=bucket_id)
+        if delete_bucket:
+            self.delete_bucket(bucket_id=bucket_id, skip_lock=skip_lock)
+
+    def clean_bucket_objects(self, bucket_id, skip_lock=True):
         try:
             self.logger.debug("Listing all objects from %s", bucket_id)
             objects = self.list_objects(bucket_id=bucket_id)
         except errors.DriverBucketUnfoundError as err:
             self.logger.debug(err)
             return
+        # Do batch
+        if len(objects) > 1:
+            try:
+                self.delete_objects(
+                    bucket_id=bucket_id,
+                    names=objects,
+                    skip_lock=skip_lock,
+                )
+                return
+            except NotImplementedError:
+                pass
+        # Or one-by-one
         for obj in objects:
             self.logger.info("Deleting object %s/%s", bucket_id, obj)
-            self.delete_object(bucket_id=bucket_id, name=obj)
-        if delete_bucket:
-            self.delete_bucket(bucket_id=bucket_id)
+            self.delete_object(bucket_id=bucket_id, name=obj, skip_lock=skip_lock)
+
+    def clean_bucket_multiparts(self, bucket_id):
+        try:
+            parts = self.list_multipart_uploads(bucket_id)
+        except NotImplementedError:
+            return
+        for part in parts:
+            self.delete_multipart_upload(
+                bucket_id=bucket_id,
+                name=part['name'],
+                upload_id=part['id'],
+            )
+
+    def clean_bucket_versions(self, bucket_id):
+        try:
+            versions = self.list_objects_versions(bucket_id=bucket_id)
+        except NotImplementedError:
+            versions = []
+        for version in versions:
+            self.logger.info("Deleting object version %s/%s:%s", bucket_id, version['name'], version['id'])
+            self.delete_object(
+                bucket_id=bucket_id,
+                name=version['name'],
+                version_id=version['id'],
+                skip_lock=True
+            )
+
+    def clean_bucket_delete_markers(self, bucket_id):
+        try:
+            markers = self.list_delete_markers(bucket_id=bucket_id)
+        except NotImplementedError:
+            markers = []
+        for marker in markers:
+            self.logger.info("Deleting delete marker %s/%s:%s", bucket_id, marker['name'], marker['id'])
+            self.delete_object(
+                bucket_id=bucket_id,
+                name=marker['name'],
+                version_id=marker['id'],
+                skip_lock=True
+            )
 
     def clean(self):
         """Delete all buckets and all object"""

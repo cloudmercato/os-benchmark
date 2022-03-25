@@ -1,4 +1,3 @@
-import statistics
 try:
     import scapy.all as scapy
 except ImportError:

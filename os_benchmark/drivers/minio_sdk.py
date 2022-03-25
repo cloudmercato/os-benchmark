@@ -2,7 +2,7 @@
 .. note::
   This driver requires `minio`_.
 
-Base S3 driver allowing usage of any S3-based storage.
+Base S3 driver using Minio SDK allowing usage of any S3-based storage.
 
 Configuration
 ~~~~~~~~~~~~~

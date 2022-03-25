@@ -5,6 +5,7 @@ import os
 import sys
 import argparse
 import json
+from collections import defaultdict
 import os_benchmark
 from os_benchmark import logger as logger_
 from os_benchmark import utils, benchmarks, errors
@@ -16,6 +17,8 @@ ACTIONS = (
     'list-buckets',
     'delete-bucket',
     'list-objects',
+    'list-objects-versions',
+    'list-object-versions',
     'upload',
     'download',
     'delete-object',
@@ -33,6 +36,7 @@ ACTIONS = (
     'tcpping',
     'traceroute',
     'tcptraceroute',
+    'test-features',
 )
 MULTIPART_THREHOLD = 64 * 2**20
 MULTIPART_CHUNKSIZE = 8 * 2**20
@@ -213,23 +217,62 @@ class Controller:
     def list_objects(self):
         self.subparser.add_argument('bucket_id')
         self.subparser.add_argument('--url', action='store_true')
+        self.subparser.add_argument('--versions', action='store_true')
         parsed_args = self.parser.parse_known_args()[0]
-        try:
-            objects = self.driver.list_objects(
+
+        if parsed_args.versions:
+            names = []
+            versions = self.driver.list_objects_versions(
                 bucket_id=parsed_args.bucket_id,
             )
-        except driver_errors.DriverBucketUnfoundError as err:
-            self.logger.warning(err.args[0])
-            return
-        for obj in objects:
+            version_per_obj = defaultdict(list)
+            for version in versions:
+                version_per_obj[version['name']].append(version['id'])
+                names.append(version['name'])
+            names = list(set(names))
+        else:
+            try:
+                names = self.driver.list_objects(
+                    bucket_id=parsed_args.bucket_id,
+                )
+            except driver_errors.DriverBucketUnfoundError as err:
+                self.logger.warning(err.args[0])
+                return
+
+        for name in names:
+            line = [name]
             if parsed_args.url:
                 url = self.driver.get_url(
                     bucket_id=parsed_args.bucket_id,
-                    name=obj
+                    name=name
                 )
-                print(obj, url)
-            else:
-                print(obj)
+                line.append(url)
+            print("\t".join(line))
+            if parsed_args.versions:
+                for version in version_per_obj[name]:
+                    print("\t" + version)
+
+    def list_object_versions(self):
+        self.subparser.add_argument('bucket_id')
+        self.subparser.add_argument('name')
+        parsed_args = self.parser.parse_known_args()[0]
+
+        versions = self.driver.list_object_versions(
+            bucket_id=parsed_args.bucket_id,
+            name=parsed_args.name,
+        )
+        for version in versions:
+            print(version)
+
+    def list_objects_versions(self):
+        self.subparser.add_argument('bucket_id')
+        parsed_args = self.parser.parse_known_args()[0]
+
+        versions = self.driver.list_objects_versions(
+            bucket_id=parsed_args.bucket_id,
+        )
+        for version in versions:
+            print(version)
 
     def delete_object(self):
         self.subparser.add_argument('bucket_id')
@@ -635,6 +678,20 @@ class Controller:
             timeout=parsed_args.timeout,
             count=parsed_args.count,
             scapy_verbose=parsed_args.scapy_verbose,
+        )
+        benchmark.setup()
+        benchmark.run()
+        benchmark.tear_down()
+        stats = benchmark.make_stats()
+        self.print_stats(stats)
+
+    def test_features(self):
+        self.subparser.add_argument('--storage-class', required=False)
+        parsed_args = self.parser.parse_known_args()[0]
+
+        benchmark = benchmarks.TestFeatureBenchmark(self.driver)
+        benchmark.set_params(
+            storage_class=parsed_args.storage_class,
         )
         benchmark.setup()
         benchmark.run()

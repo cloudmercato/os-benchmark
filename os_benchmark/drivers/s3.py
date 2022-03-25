@@ -2,7 +2,7 @@
 .. note::
   This driver requires `boto3`_.
 
-Base S3 driver allowing usage of any S3-based storage.
+Base S3 driver using boto3 allowing usage of any S3-based storage.
 
 Configuration
 ~~~~~~~~~~~~~
@@ -18,6 +18,7 @@ Configuration
 
 All parameters except ``driver`` will be passed to ``boto3.resource``.
 """
+from datetime import datetime, timedelta
 from functools import wraps
 from urllib.parse import urljoin
 
@@ -115,15 +116,23 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         }
 
     @handle_request
-    def create_bucket(self, name, acl=None, **kwargs):
+    def create_bucket(self, name, acl=None, bucket_lock=None, **kwargs):
         acl = acl or self.default_acl
         params = self._get_create_request_params(name=name, acl=acl, **kwargs)
+        if bucket_lock is not None:
+            params['ObjectLockEnabledForBucket'] = bucket_lock
+
         self.logger.debug('Create bucket params: %s', params)
         bucket = self.s3.create_bucket(**params)
         return {'id': name}
 
     @handle_request
     def delete_bucket(self, bucket_id, **kwargs):
+        try:
+            self.s3.meta.client.delete_bucket_policy(Bucket=bucket_id)
+        except Exception as err:
+            self.logger.debug(err)
+
         bucket = self.s3.Bucket(bucket_id)
         try:
             bucket.delete()
@@ -139,15 +148,17 @@ class Driver(base.RequestsMixin, base.BaseDriver):
 
     @handle_request
     def list_objects(self, bucket_id, **kwargs):
-        bucket = self.s3.Bucket(bucket_id)
         try:
-            objects = [o.key for o in bucket.objects.all()]
+            response = self.s3.meta.client.list_objects(
+                Bucket=bucket_id,
+            )
         except botocore.exceptions.ClientError as err:
             code = err.response['Error']['Code']
             msg = err.response['Error']['Message']
             if code == 'NoSuchBucket':
                 raise errors.DriverBucketUnfoundError(msg)
             raise
+        objects = [o['Key'] for o in response.get('Contents', [])]
         return objects
 
     @handle_request
@@ -185,9 +196,47 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         return {'name': name}
 
     @handle_request
-    def delete_object(self, bucket_id, name, **kwargs):
-        obj = self.s3.Object(bucket_id, name)
-        obj.delete()
+    def delete_object(self, bucket_id, name, skip_lock=None, version_id=None, **kwargs):
+        params = {
+            'Bucket': bucket_id,
+            'Key': name,
+        }
+        if skip_lock is not None:
+            params['BypassGovernanceRetention'] = skip_lock
+        if version_id is not None:
+            params['VersionId'] = version_id
+        self.logger.debug('Delete object params: %s', params)
+        try:
+            self.s3.meta.client.delete_object(**params)
+        except botocore.exceptions.ClientError as err:
+            raise
+
+    def prepare_delete_objects(self, bucket_id, names, skip_lock=None,
+                               **kwargs):
+        request = {
+            'Bucket': bucket_id,
+            'Delete': {
+                'Objects': [{'Key': n} for n in names],
+            }
+        }
+        if skip_lock is not None:
+            request['BypassGovernanceRetention'] = skip_lock
+        return request
+
+    @handle_request
+    def delete_objects(self, bucket_id, names, skip_lock=None, request=None, **kwargs):
+        if not names:
+            self.logger.debug("Skip empty list name")
+            return
+
+        if request is None:
+            request = self.prepare_delete_objects(
+                bucket_id=bucket_id,
+                names=names,
+                skip_lock=skip_lock,
+            )
+        self.logger.debug("Delete objects params: %s", request)
+        self.s3.meta.client.delete_objects(**request)
 
     @handle_request
     def copy_object(self, bucket_id, name, dst_bucket_id, dst_name, **kwargs):
@@ -214,6 +263,136 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                 raise errors.DriverObjectUnfoundError(msg)
             raise
         return obj
+
+    @handle_request
+    def put_object_tags(self, bucket_id, name, tags, **kwargs):
+        msg = "PutObjectTagging doesn't work with boto3"
+        raise NotImplementedError(msg)
+
+        try:
+            params = {
+                'Bucket': bucket_id,
+                'Key': name,
+                'Tagging': {
+                    'TagSet': [{
+                        'Key': key,
+                        'Value': value,
+                    } for key, value in tags.items()]
+                }
+            }
+            self.logger.debug("Put tag params: %s", params)
+            self.s3.meta.client.put_object_tagging(**params)
+        except botocore.exceptions.ClientError as err:
+            code = err.response['Error']['Code']
+            if code == 'InvalidArgument' and err.response['Error']['ArgumentName'] == 'tagging':
+                msg = err.args[0]
+                raise errors.DriverFeatureNotImplemented(msg)
+            raise
+
+    @handle_request
+    def list_object_tags(self, bucket_id, name, **kwargs):
+        try:
+            raw_tags = self.s3.meta.client.get_object_tagging(
+                Bucket=bucket_id,
+                Key=name,
+            )
+        except botocore.exceptions.ClientError as err:
+            raise
+        return {t['Key']: t['Value'] for t in raw_tags['TagSet']}
+
+    @handle_request
+    def put_object_lock(self, bucket_id, name, **kwargs):
+        mode = 'GOVERNANCE'
+        retain_date = datetime.now() + timedelta(hours=1)
+        try:
+            response = self.s3.meta.client.put_object_retention(
+                Bucket=bucket_id,
+                Key=name,
+                Retention={'Mode': mode, 'RetainUntilDate': retain_date}
+            )
+        except botocore.exceptions.ClientError as err:
+            raise
+
+    def list_objects_versions(self, bucket_id, **kwargs):
+        params = {'Bucket': bucket_id}
+        try:
+            response = self.s3.meta.client.list_object_versions(**params)
+        except botocore.exceptions.ClientError as err:
+            raise
+        return [{
+            'id': v['VersionId'],
+            'bucket_id': bucket_id,
+            'name': v['Key'],
+        } for v in response.get('Versions', [])]
+
+    def list_delete_markers(self, bucket_id, **kwargs):
+        params = {'Bucket': bucket_id}
+        try:
+            response = self.s3.meta.client.list_object_versions(**params)
+        except botocore.exceptions.ClientError as err:
+            raise
+        return [{
+            'id': v['VersionId'],
+            'bucket_id': bucket_id,
+            'name': v['Key'],
+        } for v in response.get('DeleteMarkers', [])]
+
+    def list_object_versions(self, bucket_id, name, **kwargs):
+        params = {
+            'Bucket': bucket_id,
+            'Prefix': name,
+        }
+        try:
+            response = self.s3.meta.client.list_object_versions(**params)
+        except botocore.exceptions.ClientError as err:
+            raise
+        return [{
+            'id': v['VersionId'],
+            'bucket_id': bucket_id,
+            'name': v['Key'],
+        } for v in response.get('Versions', [])]
+
+    def list_multipart_uploads(self, bucket_id, **kwargs):
+        params = {'Bucket': bucket_id}
+        try:
+            response = self.s3.meta.client.list_multipart_uploads(**params)
+        except botocore.exceptions.ClientError as err:
+            raise
+        return [{
+            'id': m['UploadId'],
+            'bucket_id': bucket_id,
+            'name': m['Key'],
+        } for m in response.get('Uploads', [])]
+
+    def delete_multipart_upload(self, bucket_id, name, upload_id, **kwargs):
+        params = {
+            'Bucket': bucket_id,
+            'Key': name,
+            'UploadId': upload_id
+        }
+        try:
+            response = self.s3.meta.client.abort_multipart_upload(**params)
+        except botocore.exceptions.ClientError as err:
+            raise
+
+    @handle_request
+    def get_object_torrent(self, bucket_id, name, **kwargs):
+        try:
+            response = self.s3.meta.client.get_object_torrent(
+                Bucket=bucket_id,
+                Key=name,
+            )
+        except botocore.exceptions.ClientError as err:
+            code = err.response['Error']['Code']
+            msg = err.response['Error']['Message']
+            if code in ('NotImplemented', 'MethodNotAllowed'):
+                raise errors.DriverFeatureNotImplemented(msg)
+            raise
+        magnet = response['Body'].read()
+        if len(magnet) <= 1:
+            msg = "Empty magnet"
+            raise errors.DriverFeatureNotImplemented(msg)
+        return magnet
 
     @handle_request
     def get_presigned_url(self, bucket_id, name, expiration=3600, **kwargs):

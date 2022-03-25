@@ -40,3 +40,7 @@ class DriverObjectUnfoundError(DriverError):
 
 class DriverStorageQuotaError(DriverError):
     """Driver service storage quota error"""
+
+
+class DriverFeatureNotImplemented(DriverError):
+    """The storage service doesn't implement a feature"""
