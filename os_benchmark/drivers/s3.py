@@ -162,6 +162,37 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         return objects
 
     @handle_request
+    def put_bucket_cors(self, bucket_id, **kwargs):
+        allowed_methods = ['GET', 'POST', 'HEAD']
+        expose_headers = [
+            'Access-Control-Allow-Origin',
+        ]
+        config = {
+            'CORSRules': [
+                {
+                    'AllowedMethods': allowed_methods,
+                    'AllowedOrigins': ['*'],
+                    'AllowedHeaders': ['*'],
+                    'ExposeHeaders': expose_headers,
+                    'MaxAgeSeconds': 3600,
+                }
+            ]
+        }
+        params = {
+            'Bucket': bucket_id,
+            'CORSConfiguration': config
+        }
+        self.logger.debug("CORS params: %s", params)
+        try:
+            response = self.s3.meta.client.put_bucket_cors(**params)
+        except botocore.exceptions.ClientError as err:
+            code = err.response['Error']['Code']
+            msg = err.response['Error']['Message']
+            if code == 'NoSuchBucket':
+                raise errors.DriverBucketUnfoundError(msg)
+            raise
+
+    @handle_request
     def upload(self, bucket_id, name, content, acl=None,
                multipart_threshold=None, multipart_chunksize=None,
                max_concurrency=None,

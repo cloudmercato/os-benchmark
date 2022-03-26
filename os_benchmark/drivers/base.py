@@ -224,6 +224,10 @@ class BaseDriver:
         """Abort a multipart upload"""
         raise NotImplementedError()
 
+    def put_bucket_cors(self, bucket_id, **kwargs):
+        """Configure bucket's CORS permissions"""
+        raise NotImplementedError()
+
     def clean_bucket(self, bucket_id, delete_bucket=True, skip_lock=None):
         """
         Delete all object, version, multipart and delete markers from a bucket.
