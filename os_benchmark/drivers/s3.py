@@ -212,6 +212,8 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             msg = err.response['Error']['Message']
             if code == 'NoSuchBucket':
                 raise errors.DriverBucketUnfoundError(msg)
+            if code == 'NotImplemented':
+                raise errors.DriverFeatureNotImplemented(msg)
             raise
 
     @handle_request
@@ -229,6 +231,10 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         try:
             self.s3.meta.client.put_bucket_tagging(**params)
         except botocore.exceptions.ClientError as err:
+            code = err.response['Error']['Code']
+            msg = err.response['Error']['Message']
+            if code in ('NotImplemented', 'MethodNotAllowed'):
+                raise errors.DriverFeatureNotImplemented(msg)
             raise
 
     @handle_request

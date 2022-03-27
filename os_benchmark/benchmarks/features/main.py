@@ -47,7 +47,6 @@ class TestFeatureBenchmark(base.BaseBenchmark):
             except NotImplementedError:
                 self.results[test_name] = 'not_implemented'
             except Exception as err:
-                self.logger.error(err)
                 self.logger.exception(err)
                 self.results[test_name] = 'error'
             else:
