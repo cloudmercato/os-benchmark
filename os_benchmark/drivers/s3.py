@@ -215,6 +215,36 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             raise
 
     @handle_request
+    def put_bucket_tags(self, bucket_id, tags, **kwargs):
+        params = {
+            'Bucket': bucket_id,
+            'Tagging': {
+                'TagSet': [{
+                    'Key': key,
+                    'Value': value,
+                } for key, value in tags.items()]
+            }
+        }
+        self.logger.debug("Put tag params: %s", params)
+        try:
+            self.s3.meta.client.put_bucket_tagging(**params)
+        except botocore.exceptions.ClientError as err:
+            raise
+
+    @handle_request
+    def list_bucket_tags(self, bucket_id, **kwargs):
+        params = {'Bucket': bucket_id}
+        self.logger.debug("List bucket tag params: %s", params)
+        try:
+            response = self.s3.meta.client.get_bucket_tagging(**params)
+        except botocore.exceptions.ClientError as err:
+            raise
+        return {
+            t['Key']: t['Value']
+            for t in response.get('TagSet', [])
+        }
+
+    @handle_request
     def upload(self, bucket_id, name, content, acl=None,
                multipart_threshold=None, multipart_chunksize=None,
                max_concurrency=None,

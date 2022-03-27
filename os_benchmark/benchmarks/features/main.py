@@ -8,6 +8,7 @@ from .put_object_tag import PutObjectTagTest
 from .lock_object import LockObjectTest
 from .cors import CorsTest
 from .enable_bucket_logging import EnableBucketLogggingTest
+from .put_bucket_tag import PutBucketTagTest
 
 
 class TestFeatureBenchmark(base.BaseBenchmark):
@@ -20,6 +21,7 @@ class TestFeatureBenchmark(base.BaseBenchmark):
         'lock_object': LockObjectTest,
         'cors': CorsTest,
         'bucket_logging': EnableBucketLogggingTest,
+        'put_bucket_tag': PutBucketTagTest,
     }
 
     def setup(self):

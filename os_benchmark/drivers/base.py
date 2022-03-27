@@ -228,6 +228,10 @@ class BaseDriver:
         """Configure bucket's CORS permissions"""
         raise NotImplementedError()
 
+    def put_bucket_tags(self, bucket_id, name, tags, **kwargs):
+        """Attach tags to a bucket"""
+        raise NotImplementedError()
+
     def clean_bucket(self, bucket_id, delete_bucket=True, skip_lock=None):
         """
         Delete all object, version, multipart and delete markers from a bucket.
