@@ -193,6 +193,28 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             raise
 
     @handle_request
+    def enable_bucket_logging(self, bucket_id, dst_bucket_id, prefix=None, **kwargs):
+        prefix = prefix or bucket_id[:10]
+        params = {
+            'Bucket': bucket_id,
+            'BucketLoggingStatus': {
+                'LoggingEnabled': {
+                    'TargetBucket': dst_bucket_id,
+                    'TargetPrefix': prefix,
+                }
+            }
+        }
+        self.logger.debug("Bucket logging params: %s", params)
+        try:
+            response = self.s3.meta.client.put_bucket_logging(**params)
+        except botocore.exceptions.ClientError as err:
+            code = err.response['Error']['Code']
+            msg = err.response['Error']['Message']
+            if code == 'NoSuchBucket':
+                raise errors.DriverBucketUnfoundError(msg)
+            raise
+
+    @handle_request
     def upload(self, bucket_id, name, content, acl=None,
                multipart_threshold=None, multipart_chunksize=None,
                max_concurrency=None,
