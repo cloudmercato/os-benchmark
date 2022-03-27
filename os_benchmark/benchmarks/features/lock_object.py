@@ -5,10 +5,15 @@ from os_benchmark.benchmarks import base
 
 class LockObjectTest(base.BaseBenchmark):
     def setup(self):
-        bucket_name = utils.get_random_name()
+        self.bucket_name = utils.get_random_name()
         self.obj_name = utils.get_random_name()
+        self.bucket = None
+
+    def run(self):
+        # On S3 bucket must be created with lock enabled
+        # So it's part of the test
         self.bucket = self.driver.create_bucket(
-            name=bucket_name,
+            name=self.bucket_name,
             storage_class=self.params['storage_class'],
             bucket_lock=True,
         )
@@ -19,8 +24,6 @@ class LockObjectTest(base.BaseBenchmark):
             name=self.obj_name,
             content=content,
         )
-
-    def run(self):
         self.logger.debug("Putting lock on object")
         self.driver.put_object_lock(
             bucket_id=self.bucket['id'],
@@ -42,4 +45,5 @@ class LockObjectTest(base.BaseBenchmark):
                 raise driver_errors.DriverFeatureNotImplemented(msg)
 
     def tear_down(self):
-        self.driver.clean_bucket(self.bucket['id'], skip_lock=True)
+        if self.bucket is not None:
+            self.driver.clean_bucket(self.bucket['id'], skip_lock=True)

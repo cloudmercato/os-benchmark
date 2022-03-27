@@ -14,6 +14,10 @@ class DriverAuthenticationError(DriverError):
     """Driver authentication error"""
 
 
+class DriverServerError(DriverError):
+    """Driver internal server error"""
+
+
 class DriverPermissionError(DriverError):
     """Driver permission error"""
 
@@ -42,5 +46,5 @@ class DriverStorageQuotaError(DriverError):
     """Driver service storage quota error"""
 
 
-class DriverFeatureNotImplemented(DriverError):
+class DriverFeatureUnsupported(DriverError):
     """The storage service doesn't implement a feature"""

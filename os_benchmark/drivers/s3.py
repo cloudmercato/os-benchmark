@@ -47,15 +47,21 @@ def handle_request(method):
                 raise errors.DriverConnectionError(err)
 
             msg = err.response['Error']['Message']
+            if code == 'NotImplemented':
+                raise errors.DriverFeatureUnsupported(msg)
             if code == '504':
                 raise errors.DriverConnectionError(err)
             if code == 'ServiceUnavailable':
                 raise errors.DriverConnectionError(err)
+            if code == 'InternalError':
+                raise errors.DriverServerError(err)
             if code == 'InvalidAccessKeyId':
                 msg += " (endpoint: %s)" % self.s3.meta.client._endpoint.host
                 raise errors.DriverAuthenticationError(msg)
             if code == 'NoSuchBucket':
                 raise errors.DriverBucketUnfoundError(msg)
+            if code == 'AccessDenied':
+                raise errors.DriverPermissionError(msg)
             raise
     return _handle_request
 
@@ -123,7 +129,14 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             params['ObjectLockEnabledForBucket'] = bucket_lock
 
         self.logger.debug('Create bucket params: %s', params)
-        bucket = self.s3.create_bucket(**params)
+        try:
+            bucket = self.s3.create_bucket(**params)
+        except botocore.exceptions.ClientError as err:
+            code = err.response['Error']['Code']
+            msg = err.response['Error']['Message']
+            if code == 'NotImplemented':
+                raise errors.DriverFeatureUnsupported(msg)
+            raise
         return {'id': name}
 
     @handle_request
@@ -154,7 +167,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             )
         except botocore.exceptions.ClientError as err:
             code = err.response['Error']['Code']
-            msg = err.response['Error']['Message']
+            msg = err.response['Error'].get('Message', err.args[0])
             if code == 'NoSuchBucket':
                 raise errors.DriverBucketUnfoundError(msg)
             raise
@@ -209,11 +222,11 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             response = self.s3.meta.client.put_bucket_logging(**params)
         except botocore.exceptions.ClientError as err:
             code = err.response['Error']['Code']
-            msg = err.response['Error']['Message']
+            msg = err.response['Error'].get('Message', err.args[0])
             if code == 'NoSuchBucket':
                 raise errors.DriverBucketUnfoundError(msg)
-            if code == 'NotImplemented':
-                raise errors.DriverFeatureNotImplemented(msg)
+            if code in ('NotImplemented', 'MethodNotAllowed'):
+                raise errors.DriverFeatureUnsupported(msg)
             raise
 
     @handle_request
@@ -233,8 +246,8 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         except botocore.exceptions.ClientError as err:
             code = err.response['Error']['Code']
             msg = err.response['Error']['Message']
-            if code in ('NotImplemented', 'MethodNotAllowed'):
-                raise errors.DriverFeatureNotImplemented(msg)
+            if code in ('NotImplemented', 'MethodNotAllowed', 'UnsupportedOperation'):
+                raise errors.DriverFeatureUnsupported(msg)
             raise
 
     @handle_request
@@ -244,6 +257,11 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         try:
             response = self.s3.meta.client.get_bucket_tagging(**params)
         except botocore.exceptions.ClientError as err:
+            code = err.response['Error']['Code']
+            msg = err.response['Error']['Message']
+            # For Exoscale
+            if code == 'NoSuchTagSet':
+                raise errors.DriverFeatureUnsupported(msg)
             raise
         return {
             t['Key']: t['Value']
@@ -375,7 +393,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             code = err.response['Error']['Code']
             if code == 'InvalidArgument' and err.response['Error']['ArgumentName'] == 'tagging':
                 msg = err.args[0]
-                raise errors.DriverFeatureNotImplemented(msg)
+                raise errors.DriverFeatureUnsupported(msg)
             raise
 
     @handle_request
@@ -402,6 +420,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         except botocore.exceptions.ClientError as err:
             raise
 
+    @handle_request
     def list_objects_versions(self, bucket_id, **kwargs):
         params = {'Bucket': bucket_id}
         try:
@@ -414,6 +433,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             'name': v['Key'],
         } for v in response.get('Versions', [])]
 
+    @handle_request
     def list_delete_markers(self, bucket_id, **kwargs):
         params = {'Bucket': bucket_id}
         try:
@@ -426,6 +446,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             'name': v['Key'],
         } for v in response.get('DeleteMarkers', [])]
 
+    @handle_request
     def list_object_versions(self, bucket_id, name, **kwargs):
         params = {
             'Bucket': bucket_id,
@@ -473,14 +494,14 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             )
         except botocore.exceptions.ClientError as err:
             code = err.response['Error']['Code']
-            msg = err.response['Error']['Message']
+            msg = err.response['Error'].get('Message', err.args[0])
             if code in ('NotImplemented', 'MethodNotAllowed'):
-                raise errors.DriverFeatureNotImplemented(msg)
+                raise errors.DriverFeatureUnsupported(msg)
             raise
         magnet = response['Body'].read()
         if len(magnet) <= 1:
             msg = "Empty magnet"
-            raise errors.DriverFeatureNotImplemented(msg)
+            raise errors.DriverFeatureUnsupported(msg)
         return magnet
 
     @handle_request

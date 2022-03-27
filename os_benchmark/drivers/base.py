@@ -228,8 +228,12 @@ class BaseDriver:
         """Configure bucket's CORS permissions"""
         raise NotImplementedError()
 
-    def put_bucket_tags(self, bucket_id, name, tags, **kwargs):
+    def put_bucket_tags(self, bucket_id, tags, **kwargs):
         """Attach tags to a bucket"""
+        raise NotImplementedError()
+
+    def list_bucket_tags(self, bucket_id, **kwargs):
+        """List tags attached to a bucket"""
         raise NotImplementedError()
 
     def clean_bucket(self, bucket_id, delete_bucket=True, skip_lock=None):
@@ -282,7 +286,7 @@ class BaseDriver:
     def clean_bucket_versions(self, bucket_id):
         try:
             versions = self.list_objects_versions(bucket_id=bucket_id)
-        except NotImplementedError:
+        except (NotImplementedError, errors.DriverFeatureUnsupported):
             versions = []
         for version in versions:
             self.logger.info("Deleting object version %s/%s:%s", bucket_id, version['name'], version['id'])
@@ -296,7 +300,7 @@ class BaseDriver:
     def clean_bucket_delete_markers(self, bucket_id):
         try:
             markers = self.list_delete_markers(bucket_id=bucket_id)
-        except NotImplementedError:
+        except (NotImplementedError, errors.DriverFeatureUnsupported):
             markers = []
         for marker in markers:
             self.logger.info("Deleting delete marker %s/%s:%s", bucket_id, marker['name'], marker['id'])

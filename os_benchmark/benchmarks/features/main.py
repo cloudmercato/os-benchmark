@@ -41,18 +41,24 @@ class TestFeatureBenchmark(base.BaseBenchmark):
             test.setup()
             try:
                 test.run()
-            except driver_errors.DriverFeatureNotImplemented as err:
-                self.logger.info("DriverFeatureNotImplemented: %s", err)
+            except driver_errors.DriverFeatureUnsupported as err:
+                self.logger.info("DriverFeatureUnsupported: %s", err)
                 self.results[test_name] = 'nok'
             except NotImplementedError:
                 self.results[test_name] = 'not_implemented'
+            except driver_errors.DriverError as err:
+                self.logger.error(err)
+                self.results[test_name] = 'error'
             except Exception as err:
                 self.logger.exception(err)
                 self.results[test_name] = 'error'
             else:
                 self.results[test_name] = 'ok'
             finally:
-                test.tear_down()
+                try:
+                    test.tear_down()
+                except Exception as err:
+                    self.logger.exception(err)
 
     def make_stats(self):
         return self.results

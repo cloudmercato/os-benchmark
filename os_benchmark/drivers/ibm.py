@@ -24,6 +24,7 @@ from urllib.parse import urljoin
 import ibm_boto3
 import ibm_botocore
 from os_benchmark.drivers import s3
+from os_benchmark.drivers import errors
 
 
 class Driver(s3.Driver):
@@ -39,9 +40,33 @@ class Driver(s3.Driver):
             kwargs.update(self.kwargs)
             config = {'signature_version': "oauth"}
             config.update(self.kwargs.get('config') or {})
+            self.logger.debug("boto Config: %s", config)
             kwargs['config'] = ibm_botocore.client.Config(**config)
             self._s3 = ibm_boto3.resource("s3", **kwargs)
         return self._s3
+
+    def create_bucket(self, bucket_lock=None, *args, **kwargs):
+        if bucket_lock is not None:
+            msg = "Bucket lock unsupported by ibm_boto %s" % ibm_boto3.__version__
+            raise errors.DriverFeatureUnsupported(msg)
+        return super().create_bucket(*args, **kwargs)
+
+    def enable_bucket_logging(self, *args, **kwargs):
+        if hasattr(self.s3.meta.client, 'put_bucket_logging'):
+            return super().enable_bucket_logging(*args, **kwargs)
+        msg = "Bucket logging unsupported by ibm_boto %s" % ibm_boto3.__version__
+        raise errors.DriverFeatureUnsupported(msg)
+
+    def get_object_torrent(self, *args, **kwargs):
+        try:
+            magnet = super().get_object_torrent(*args, **kwargs)
+        except ibm_botocore.exceptions.ClientError as err:
+            code = err.response['Error']['Code']
+            msg = err.response['Error'].get('Message', err.args[0])
+            if 'not supported' in msg:
+                raise errors.DriverFeatureUnsupported(msg)
+            raise
+        return magnet
 
     def get_url(self, bucket_id, name, **kwargs):
         url = urljoin(self.kwargs['endpoint_url'], '%s/%s' % (bucket_id, name))
