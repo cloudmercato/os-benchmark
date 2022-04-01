@@ -523,6 +523,7 @@ class Controller:
         self.subparser.add_argument('--warmup-sleep', type=int, default=0)
         self.subparser.add_argument('--sleep-time', type=int, default=5)
         self.subparser.add_argument('--client-number', type=int, default=1)
+        self.subparser.add_argument('--process-number', type=int, default=1)
         self.subparser.add_argument('--delay-time', type=float, default=.25)
         self.subparser.add_argument('--keep-objects', action="store_true")
         self.subparser.add_argument('--bucket-id', default=None)
@@ -539,6 +540,7 @@ class Controller:
             warmup_sleep=parsed_args.warmup_sleep,
             sleep_time=parsed_args.sleep_time,
             client_number=parsed_args.client_number,
+            process_number=parsed_args.process_number,
             delay_time=parsed_args.delay_time,
             keep_objects=parsed_args.keep_objects,
             bucket_id=parsed_args.bucket_id,

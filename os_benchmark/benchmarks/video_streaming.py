@@ -1,3 +1,5 @@
+import logging
+import concurrent
 import asyncio
 try:
     import aiohttp
@@ -6,67 +8,138 @@ except ImportError:
 from os_benchmark import utils, errors
 from . import base
 
+logger = logging.getLogger("osb")
+
+
+async def _download(session, url):
+    """
+    Download from a URL and catch errors.
+    """
+    try:
+        async with session.get(url) as response:
+            elapsed, _ = await utils.async_timeit(response.read)
+    except aiohttp.client_exceptions.ClientResponseError as err:
+        return -1, err
+    except aiohttp.client_exceptions.ClientConnectorError as err:
+        return -1, err
+    except base.ASYNC_TIMEOUT_ERRORS as err:
+        return -1, err
+    return elapsed, response
+
+
+async def _download_objets(
+        urls,
+        delay=0,
+        read_timeout=5,
+        connect_timeout=10,
+        max_concurrency=1,
+        sleep_time=5,
+        process_id=None,
+        thread_id=None,
+    ):
+    """
+    Download each object defined by ``urls``.
+    A sleep time is applied between each request.
+    """
+    session_kwargs = {
+        'raise_for_status': True,
+        'read_timeout': read_timeout,
+        'conn_timeout': connect_timeout,
+    }
+    await asyncio.sleep(delay)
+    logger.debug("Started client %s-%s", process_id, thread_id)
+    connector = aiohttp.TCPConnector(
+        limit=max_concurrency,
+    )
+    session_kwargs['connector'] = connector
+    session = aiohttp.ClientSession(**session_kwargs)
+    timings, errs = [], []
+    for url in urls:
+        await asyncio.sleep(sleep_time)
+        elapsed, response = await _download(session, url)
+        if elapsed == -1:
+            errs.append(response)
+        else:
+            timings.append(elapsed)
+    await session.close()
+    connector.close()
+    logger.debug("End client %s-%s", process_id, thread_id)
+    return timings, errs
+
+
+def _run_process(
+        process_id,
+        urls,
+        client_number,
+        delay,
+        sleep_time,
+        read_timeout,
+        connect_timeout,
+    ):
+    """
+    Run a process containing one or several clients.
+    """
+    clients = []
+    timings = []
+    errors = []
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    logger.debug("Started process %s", process_id)
+    for i in range(client_number):
+        delay = i * delay
+        clients.append(_download_objets(
+            process_id=process_id,
+            thread_id=i,
+            urls=urls,
+            delay=delay,
+            read_timeout=read_timeout,
+            connect_timeout=connect_timeout,
+            max_concurrency=1,
+            sleep_time=sleep_time,
+        ))
+    tasks = asyncio.gather(*clients)
+    results = loop.run_until_complete(tasks)
+    for _timings, errs in results:
+        timings.extend(_timings)
+        errors.extend(errs)
+
+    loop.close()
+    return timings, errors
+
 
 class VideoStreamingBenchmark(base.BaseSetupObjectsBenchmark):
-    """"""
+    """
+    Download sequentially with sleep-time between objects.
+    """
     def run(self, **kwargs):
         self.sleep(self.params['warmup_sleep'])
-
-        async def download(session, url):
-            try:
-                async with session.get(url) as response:
-                    elapsed, _ = await utils.async_timeit(response.read)
-            except aiohttp.client_exceptions.ClientResponseError as err:
-                return -1, err
-            except aiohttp.client_exceptions.ClientConnectorError as err:
-                return -1, err
-            except base.ASYNC_TIMEOUT_ERRORS as err:
-                return -1, err
-            return elapsed, response
-
-        async def download_objets(delay=0):
-            await asyncio.sleep(delay)
-            connector = aiohttp.TCPConnector(
-                limit=self.params.get('max_concurrency'),
-            )
-            session_kwargs['connector'] = connector
-            session = aiohttp.ClientSession(**session_kwargs)
-            timings, errs = [], []
-            for url in self.urls:
-                # self.logger.warning("Download %s", url)
-                await asyncio.sleep(self.params['sleep_time'])
-                elapsed, response = await download(session, url)
-                if elapsed == -1:
-                    errors.append(response)
-                else:
-                    timings.append(elapsed)
-            await session.close()
-            connector.close()
-            return timings, errs
-
-        session_kwargs = {
-            'raise_for_status': True,
-            'read_timeout': self.driver.read_timeout,
-            'conn_timeout': self.driver.connect_timeout
-        }
         self.timings = []
-        loop = asyncio.get_event_loop()
-        asyncio.set_event_loop(loop)
-
         def run():
-            clients = []
-            for i in range(self.params['client_number']):
-                # self.logger.warning("Start client #%d", i)
-                delay = i * self.params['delay_time']
-                clients.append(download_objets(delay))
-            tasks = asyncio.gather(*clients)
-            results = loop.run_until_complete(tasks)
-            for timings, errs in results:
-                self.timings.extend(timings)
-                self.errors.extend(errs)
+            self.logger.debug('Starting processs')
+            pool = concurrent.futures.ProcessPoolExecutor(
+                max_workers=self.params['process_number'],
+            )
+            futures = []
+            for i in range(self.params['process_number']):
+                futures.append(pool.submit(
+                    _run_process,
+                    i,
+                    self.urls,
+                    self.params['client_number'],
+                    self.params['delay_time'],
+                    self.params['sleep_time'],
+                    self.driver.read_timeout,
+                    self.driver.connect_timeout,
+                ))
+            for future in futures:
+                while not future.done():
+                    timings, errs = future.result()
+                    self.timings.extend(timings)
+                    self.errors.extend(errs)
+            pool.shutdown()
 
         self.total_time = self.timeit(run)[0]
-        loop.close()
 
     def make_stats(self):
         count = len(self.timings)
@@ -92,6 +165,7 @@ class VideoStreamingBenchmark(base.BaseSetupObjectsBenchmark):
             'warmup_sleep': self.params['warmup_sleep'],
             'sleep_time': int(self.params['sleep_time']),
             'client_number': int(self.params['client_number']),
+            'process_number': int(self.params['process_number']),
             'delay_time': self.params['delay_time'],
         }
 
@@ -100,6 +174,8 @@ class VideoStreamingBenchmark(base.BaseSetupObjectsBenchmark):
 
         if error_count:
             for err in self.errors:
+                if self.logger.level <= 20:
+                    self.logger.exception(err)
                 if isinstance(err, aiohttp.client_exceptions.ClientConnectorError):
                     key = 'error_client'
                 elif isinstance(err, base.ASYNC_TIMEOUT_ERRORS):
