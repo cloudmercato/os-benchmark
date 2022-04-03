@@ -386,6 +386,7 @@ class Controller:
         self.subparser.add_argument('--presigned', action="store_true")
         self.subparser.add_argument('--warmup-sleep', type=int, default=0)
         self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
+        self.subparser.add_argument('--process-number', type=int, default=MAX_CONCURRENCY)
         self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
         self.subparser.add_argument('--keep-objects', action="store_true")
         self.subparser.add_argument('--bucket-id', default=None)
@@ -401,6 +402,7 @@ class Controller:
             presigned=parsed_args.presigned,
             warmup_sleep=parsed_args.warmup_sleep,
             multipart_chunksize=parsed_args.multipart_chunksize,
+            process_number=parsed_args.process_number,
             max_concurrency=parsed_args.max_concurrency,
             keep_objects=parsed_args.keep_objects,
             bucket_id=parsed_args.bucket_id,
