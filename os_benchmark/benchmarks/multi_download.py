@@ -1,11 +1,12 @@
-import asyncio
-try:
-    import aiohttp
-except ImportError:
-    aiohttp = None
-
+import concurrent
+import requests
 from os_benchmark import utils
 from . import base
+
+
+def _download(session, url, b_range):
+    headers = {'Range': 'bytes=%s-%s' % b_range}
+    session.get(url, headers=headers)
 
 
 class MultiDownloadBenchmark(base.BaseSetupObjectsBenchmark):
@@ -18,43 +19,37 @@ class MultiDownloadBenchmark(base.BaseSetupObjectsBenchmark):
         else:
             self.multipart_chunksize = 64*2**20
         self.chunk_number = self.params['object_size'] // self.multipart_chunksize
+        self.session = requests.Session()
         super().setup()
 
     def run(self, **kwargs):
         self.sleep(self.params['warmup_sleep'])
+        pool = concurrent.futures.ProcessPoolExecutor(
+            max_workers=self.params['process_number'],
+        )
 
-        async def download(session, url, b_range):
-            headers = {'Range': 'bytes=%s-%s' % b_range}
-            async with session.get(url, headers=headers) as response:
-                elapsed, _ = await utils.async_timeit(response.text)
-                return elapsed, response
+        def download_object(url):
+            futures = []
+            for i in range(self.chunk_number):
+                b_range = (i*self.multipart_chunksize, min(i*self.multipart_chunksize+self.multipart_chunksize, self.params['object_size']-1))
+                headers = {'Range': 'bytes=%s-%s' % b_range}
+                futures.append(pool.submit(
+                    _download,
+                    self.session,
+                    url,
+                    b_range,
+                ))
+            for future in futures:
+                while not future.done():
+                    future.result()
 
-        async def download_objets():
-            connector = aiohttp.TCPConnector(
-                limit=self.params.get('max_concurrency'),
-            )
-            session_kwargs['connector'] = connector
-            session = aiohttp.ClientSession(**session_kwargs)
-            requests = []
+        def run():
             for url in self.urls:
-                for i in range(self.chunk_number):
-                    b_range = (i*self.multipart_chunksize, min(i*self.multipart_chunksize+self.multipart_chunksize, self.params['object_size']))
-                    requests.append(download(session, url, b_range))
-            results = await asyncio.gather(*requests)
-            await session.close()
-            connector.close()
-
-            for elapsed, response in results:
+                elapsed = self.timeit(download_object, url)[0]
                 self.timings.append(elapsed)
 
-        session_kwargs = {
-            'raise_for_status': True,
-            'read_timeout': self.driver.read_timeout,
-            'conn_timeout': self.driver.connect_timeout
-        }
-        def run():
-            asyncio.run(download_objets())
         self.total_time = utils.timeit(run)[0]
+        pool.shutdown()
 
     def make_stats(self):
         count = len(self.timings)
@@ -62,23 +57,19 @@ class MultiDownloadBenchmark(base.BaseSetupObjectsBenchmark):
         size = self.params['object_size']
         total_size = count * size
         test_time = sum(self.timings)
-        bw = (total_size/test_time/2**20) if test_time else 0
-        rate = (count/test_time) if test_time else 0
         stats = {
-            'operation': 'download',
+            'operation': 'multi_download',
             'ops': count,
             'time': self.total_time,
-            'bw': bw,
-            'rate': rate,
             'bucket_prefix': self.params.get('bucket_prefix'),
             'object_size': size,
             'object_number': self.params['object_number'],
             'object_prefix': self.params.get('object_prefix'),
-            'max_concurrency': self.params.get('max_concurrency'),
-            'multipart_threshold': 0,
             'multipart_chunksize': self.multipart_chunksize,
+            'process_number': self.params['process_number'],
             'chunk_number': self.chunk_number,
             'total_size': total_size,
+            'total_time': self.total_time,
             'test_time': test_time,
             'errors': error_count,
             'driver': self.driver.id,
@@ -86,10 +77,13 @@ class MultiDownloadBenchmark(base.BaseSetupObjectsBenchmark):
             'connect_timeout': self.driver.connect_timeout,
             'presigned': int(self.params['presigned']),
             'warmup_sleep': self.params['warmup_sleep'],
+            'error_timeout': 0,
         }
-        stats.update(self._make_aggr(self.timings))
+        stats.update(self._make_aggr(self.timings, 'time'))
+        bws = [(size/t) for t in self.timings]
+        stats.update(self._make_aggr(bws, 'bw'))
+
         if error_count:
-            error_codes = set([e for e in self.errors])
             stats.update({'error_count_%s' % e.args[1]: 0 for e in self.errors})
             for err in self.errors:
                 key = 'error_count_%s' % err.args[1]

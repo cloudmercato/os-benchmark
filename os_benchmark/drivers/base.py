@@ -121,7 +121,7 @@ class BaseDriver:
         """Get object URL"""
         raise NotImplementedError()
 
-    def download(self, url, block_size=65536, **kwargs):
+    def download(self, url, block_size=65536, headers=None, **kwargs):
         """Download object from URL"""
         raise NotImplementedError()
 
@@ -347,10 +347,10 @@ class RequestsMixin:
             self._session.mount('https://', adapter)
         return self._session
 
-    def download(self, url, block_size=65536, **kwargs):
+    def download(self, url, block_size=65536, headers=None, **kwargs):
         self.logger.debug('GET %s', url)
         try:
-            with self.session.get(url, stream=True) as response:
+            with self.session.get(url, stream=True, headers=headers) as response:
                 if response.status_code != 200:
                     msg = '%s %s' % (url, response.content)
                     raise errors.base.InvalidHttpCode(msg, response.status_code)
