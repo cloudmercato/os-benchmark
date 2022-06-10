@@ -24,7 +24,20 @@ Drivers configuration are stored as a YAML file containing one or several profil
       aws_secret_access_key: MySecret
       endpoint_url: https://sos-ch-vie-1.exo.io
 
-This file provides two profiles for an Exoscale benchmark, on in DK-2 and the other one in CH-VIE-1.
+    my_wasabi_east:
+        driver: wasabi
+        aws_access_key_id: <access_key>
+        aws_secret_access_key: <secret_key>
+        region_name: us-east-1
+
+    my_wasabi_west:
+        driver: wasabi
+        aws_access_key_id: <access_key>
+        aws_secret_access_key: <secret_key>
+        region_name: us-west-1
+
+This file provides two profiles for an Exoscale benchmark, on in DK-2 and the other one in CH-VIE-1
+as well as two profiles for Wasabi Hot Cloud Storage, one on the East Coast, USA, and the other on the West Coast, USA.
 
 File choice
 -----------

@@ -56,6 +56,12 @@ You need to specify a YAML config file such as following: ::
       aws_access_key_id: mykey                  # Drivers params
       aws_secret_access_key: mysecrect
       endpoint_url: https://sos-ch-dk-2.exo.io
+
+  my_wasabi:
+      driver: wasabi
+      aws_access_key_id: <access_key>
+      aws_secret_access_key: <secret_key>
+      region_name: <region_name>
   
 In command line, ``--config-file`` and ``--config-raw`` can be used to make the
 choice, else ``~/.osb.yml``, then ``/etc/osb.yml`` will be used.
