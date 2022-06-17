@@ -12,30 +12,42 @@ Configuration
     driver: wasabi
     aws_access_key_id: <your_ak>
     aws_secret_access_key: <your_sk>
+    region_name: <your_region>
 
-Possible region IDs are the following:
+Possible region IDs available at the following urls:
 
-- ``us-east-1``: US East 1 (N. Virginia)
-- ``us-east-2``: US East 2 (N. Virginia)
-- ``us-west-1``: US West 1 (Oregon)
-- ``eu-central-1``: EU Central 1 (Amsterdam)
+- https://s3.wasabisys.com/?describeRegions
+- https://wasabi-support.zendesk.com/hc/en-us/articles/360015106031
 
 .. _boto3: https://github.com/boto/boto3
 """
+import xml.dom.minidom
 from urllib.parse import urljoin
+
+import urllib3.exceptions
+
 from os_benchmark.drivers import s3
 
 
 class Driver(s3.Driver):
     """Wasabi S3 Driver"""
     id = 'wasabi'
+    describe_regions_url = 'https://s3.wasabisys.com/?describeRegions'
     endpoint_url = 'https://s3.wasabisys.com'
-    endpoint_urls = {
-        'us-east-1': 'https://s3.us-east-1.wasabisys.com',
-        'us-east-2': 'https://s3.us-east-2.wasabisys.com',
-        'us-west-1': 'https://s3.us-west-1.wasabisys.com',
-        'eu-central-1': 'https://s3.eu-central-1.wasabisys.com',
-    }
+    endpoint_urls = {}
+
+    try:
+        http = urllib3.PoolManager()
+        r = http.request('GET', describe_regions_url)
+        doc = xml.dom.minidom.parseString(r.data)
+        for item in doc.getElementsByTagName('item'):
+            region = item.getElementsByTagName('Region')[0].firstChild.data
+            endpoint = item.getElementsByTagName('Endpoint')[0].firstChild.data
+            endpoint_urls[region] = "https://%s" % endpoint
+    except xml.parsers.expat.ExpatError as err:
+        raise Exception("Unable parse Wasabi describeRegions XML payload.")
+    except urllib3.exceptions.HTTPError as err:
+        raise Exception("Unable connect to %s and verify Wasabi Regions." % describe_regions_url)
 
     default_kwargs = {
         'endpoint_url': endpoint_url,
