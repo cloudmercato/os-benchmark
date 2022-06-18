@@ -12,34 +12,41 @@ Configuration
     driver: wasabi
     aws_access_key_id: <your_ak>
     aws_secret_access_key: <your_sk>
+    region_name: <region_name>
 
-Possible region IDs are the following:
+Possible region IDs available at the following urls:
 
-- ``us-east-1``: US East 1 (N. Virginia)
-- ``us-east-2``: US East 2 (N. Virginia)
-- ``us-west-1``: US West 1 (Oregon)
-- ``eu-central-1``: EU Central 1 (Amsterdam)
+- https://s3.wasabisys.com/?describeRegions
+- https://wasabi-support.zendesk.com/hc/en-us/articles/360015106031
 
 .. _boto3: https://github.com/boto/boto3
 """
+from xml.dom import minidom
 from urllib.parse import urljoin
 from os_benchmark.drivers import s3
+
 
 
 class Driver(s3.Driver):
     """Wasabi S3 Driver"""
     id = 'wasabi'
     endpoint_url = 'https://s3.wasabisys.com'
-    endpoint_urls = {
-        'us-east-1': 'https://s3.us-east-1.wasabisys.com',
-        'us-east-2': 'https://s3.us-east-2.wasabisys.com',
-        'us-west-1': 'https://s3.us-west-1.wasabisys.com',
-        'eu-central-1': 'https://s3.eu-central-1.wasabisys.com',
-    }
-
     default_kwargs = {
         'endpoint_url': endpoint_url,
     }
+
+    @property
+    def endpoint_urls(self):
+        if not hasattr(self, '_endpoint_urls'):
+            self._endpoint_urls = {}
+            params = {'describeRegions': ''}
+            data = self.session.get(self.endpoint_url, params=params).text
+            doc = minidom.parseString(data)
+            for item in doc.getElementsByTagName('item'):
+                region = item.getElementsByTagName('Region')[0].firstChild.data
+                endpoint = item.getElementsByTagName('Endpoint')[0].firstChild.data
+                self.endpoint_urls[region] = "https://%s" % endpoint
+        return self._endpoint_urls
 
     def get_custom_kwargs(self, kwargs):
         if 'region_name' in kwargs:
