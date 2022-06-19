@@ -16,12 +16,15 @@ Configuration
     access_key: <your_ak>
     secret_key: <your_sk>
     region: eu-west-1
+    url_template: https://{endpoint}/{bucket}/{object}
 
 All parameters except ``driver`` will be passed to ``minio.Minio``
 """
 import urllib3
+import ssl
 from urllib.parse import urljoin
 from minio import Minio
+from minio import error as minio_error
 from os_benchmark.drivers import base, errors
 
 
@@ -35,6 +38,11 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         if not hasattr(self, '_client'):
             kwargs = self.kwargs.copy()
             num_pools = kwargs.pop('num_pools', 32)
+            verify = kwargs.pop('verify', True)
+            self.default_object_acl = kwargs.pop('object_acl', self.default_object_acl)
+            self.default_acl = kwargs.pop('acl', self.default_acl)
+            if not verify:
+                ssl._create_default_https_context = ssl._create_unverified_context
 
             http_client = urllib3.PoolManager(
                 timeout=urllib3.Timeout(
@@ -47,7 +55,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             )
             self._client = Minio(
                 http_client=http_client,
-                **self.kwargs,
+                **kwargs,
             )
         return self._client
 
@@ -60,10 +68,10 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         acl = acl or self.default_acl
         params = {
             'bucket_name': name,
-            # 'headers': {},
         }
-        # if acl is not None:
-        #     params['headers']['x-amz-acl'] = acl
+        if acl is not None:
+            params['headers'] = {}
+            params['headers']['x-amz-acl'] = acl
         if bucket_lock is not None:
             params['object_lock'] = bucket_lock
         self.logger.debug("Create bucket params: %s", params)
@@ -71,7 +79,12 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         return {'id': name}
 
     def delete_bucket(self, bucket_id, **kwargs):
-        self.client.remove_bucket(bucket_id)
+        try:
+            self.client.remove_bucket(bucket_id)
+        except minio_error.S3Error as err:
+            if err.code == 'BucketNotEmpty':
+                raise errors.DriverNonEmptyBucketError(err.message)
+            raise
 
     def list_objects(self, bucket_id, **kwargs):
         params = {
@@ -111,11 +124,21 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         if version_id is not None:
             params['version_id'] = version_id
         self.logger.debug("Delete object params: %s", params)
-        obj = self.client.remove_object(**params)
+        self.client.remove_object(**params)
+
+    def get_presigned_url(self, bucket_id, name, method='GET', **kwargs):
+        url = self.client.get_presigned_url(
+            method=method,
+            bucket_name=bucket_id,
+            object_name=name,
+        )
+        return url
 
     def get_url(self, bucket_id, name, presigned=True, **kwargs):
         if presigned:
             url = self.get_presigned_url(bucket_id, name)
+        elif self.kwargs.get('url_template'):
+            url = self.kwargs['url_template'] % self.kwargs
         else:
             hostname = 'https://' + self.kwargs['endpoint']
             url = urljoin(hostname, '%s/%s' % (bucket_id, name))

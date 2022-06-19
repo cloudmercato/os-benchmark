@@ -50,7 +50,10 @@ class UploadBenchmark(base.BaseBenchmark):
 
     def tear_down(self):
         if not self.params.get('keep_objects'):
-            self.driver.clean_bucket(bucket_id=self.bucket['id'])
+            try:
+                self.driver.clean_bucket(bucket_id=self.bucket['id'])
+            except driver_errors.DriverNonEmptyBucketError as err:
+                self.logger.error(err)
 
     def make_stats(self):
         count = len(self.timings)
