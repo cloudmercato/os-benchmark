@@ -20,11 +20,14 @@ Configuration
 
 All parameters except ``driver`` will be passed to ``minio.Minio``
 """
-import urllib3
 import ssl
+import urllib3
 from urllib.parse import urljoin
+
 from minio import Minio
 from minio import error as minio_error
+from minio.xml import Element, SubElement, getbytes
+
 from os_benchmark.drivers import base, errors
 
 
@@ -65,17 +68,28 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         return buckets
 
     def create_bucket(self, name, acl=None, bucket_lock=None, **kwargs):
+        location = self.kwargs['region']
+        headers = {}
+
         acl = acl or self.default_acl
+        if acl is not None:
+            headers["x-amz-acl"] = acl
+        if bucket_lock:
+            headers["x-amz-bucket-object-lock-enabled"] = "true"
+
+        body = None
+        if self.kwargs.get('LocationConstraint'):
+            element = Element("CreateBucketConfiguration")
+            SubElement(element, "LocationConstraint", location)
+            body = getbytes(element)
         params = {
             'bucket_name': name,
+            'body': body,
+            'headers': headers,
         }
-        if acl is not None:
-            params['headers'] = {}
-            params['headers']['x-amz-acl'] = acl
-        if bucket_lock is not None:
-            params['object_lock'] = bucket_lock
         self.logger.debug("Create bucket params: %s", params)
-        bucket = self.client.make_bucket(**params)
+        self.client._url_open("PUT", location, **params)
+        self.client._region_map[name] = location
         return {'id': name}
 
     def delete_bucket(self, bucket_id, **kwargs):
