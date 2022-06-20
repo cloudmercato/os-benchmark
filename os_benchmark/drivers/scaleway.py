@@ -18,6 +18,7 @@ Possible ``<region_name>`` are the following:
 
 - ``fr-par``: Paris, France
 - ``nl-ams``: Amsterdam, Netherland
+- ``pl-waw``: Warsaw, Poland
 
 .. _boto3: https://github.com/boto/boto3
 """
@@ -31,7 +32,8 @@ class Driver(s3.Driver):
     endpoint_url = 'https://s3.fr-par.scw.cloud'
     endpoint_urls = {
         'fr-par': 'https://s3.fr-par.scw.cloud',
-        'nl-ams': 'https://s3-nl-ams.scw.cloud',
+        'nl-ams': 'https://s3.nl-ams.scw.cloud',
+        'pl-waw': 'https://s3.pl-waw.scw.cloud',
     }
     default_kwargs = {
         'endpoint_url': endpoint_url,
