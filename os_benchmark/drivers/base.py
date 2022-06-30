@@ -2,10 +2,13 @@
 Base Driver class module.
 """
 import logging
-import requests
+
+import tenacity
 import concurrent.futures
+import requests
 from requests.adapters import HTTPAdapter as BaseHTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+
 from os_benchmark.drivers import errors
 
 USER_AGENT = 'os-benchmark'
@@ -14,6 +17,11 @@ MULTIPART_CHUNKSIZE = 64*2**20
 MAX_CONCURRENCY = 10
 CONNECT_TIMEOUT = 3
 READ_TIMEOUT = 1
+
+retry = tenacity.Retrying(
+    wait=tenacity.wait_exponential(),
+    stop=tenacity.stop_after_attempt(10)
+)
 
 
 class MultiPart:
@@ -246,7 +254,11 @@ class BaseDriver:
         self.clean_bucket_delete_markers(bucket_id=bucket_id)
         self.clean_bucket_multiparts(bucket_id=bucket_id)
         if delete_bucket:
-            self.delete_bucket(bucket_id=bucket_id, skip_lock=skip_lock)
+            retry.__call__(
+                self.delete_bucket,
+                bucket_id=bucket_id,
+                skip_lock=skip_lock,
+            )
 
     def clean_bucket_objects(self, bucket_id, skip_lock=True):
         try:
@@ -258,7 +270,8 @@ class BaseDriver:
         # Do batch
         if len(objects) > 1:
             try:
-                self.delete_objects(
+                retry.__call__(
+                    self.delete_objects,
                     bucket_id=bucket_id,
                     names=objects,
                     skip_lock=skip_lock,
@@ -269,7 +282,12 @@ class BaseDriver:
         # Or one-by-one
         for obj in objects:
             self.logger.info("Deleting object %s/%s", bucket_id, obj)
-            self.delete_object(bucket_id=bucket_id, name=obj, skip_lock=skip_lock)
+            retry.__call__(
+                self.delete_object,
+                bucket_id=bucket_id,
+                name=obj,
+                skip_lock=skip_lock
+            )
 
     def clean_bucket_multiparts(self, bucket_id):
         try:
