@@ -271,10 +271,12 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     @handle_request
     def upload(self, bucket_id, name, content, acl=None,
                multipart_threshold=None, multipart_chunksize=None,
-               max_concurrency=None,
+               max_concurrency=None, storage_class=None,
                **kwargs):
         acl = acl or self.default_object_acl
         extra = {'ACL': acl}
+        if storage_class:
+            extra['StorageClass'] = storage_class
         multipart_threshold = multipart_threshold or base.MULTIPART_THRESHOLD
         multipart_chunksize = multipart_chunksize or base.MULTIPART_CHUNKSIZE
         max_concurrency = max_concurrency or base.MAX_CONCURRENCY

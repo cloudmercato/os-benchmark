@@ -40,6 +40,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     def client(self):
         if not hasattr(self, '_client'):
             kwargs = self.kwargs.copy()
+            kwargs.pop('extra', None)
             num_pools = kwargs.pop('num_pools', 32)
             verify = kwargs.pop('verify', True)
             self.default_object_acl = kwargs.pop('object_acl', self.default_object_acl)
@@ -78,7 +79,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             headers["x-amz-bucket-object-lock-enabled"] = "true"
 
         body = None
-        if self.kwargs.get('LocationConstraint'):
+        if self.kwargs.get('extra') and self.kwargs['extra'].get('location_constraint'):
             element = Element("CreateBucketConfiguration")
             SubElement(element, "LocationConstraint", location)
             body = getbytes(element)
@@ -88,7 +89,11 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             'headers': headers,
         }
         self.logger.debug("Create bucket params: %s", params)
-        self.client._url_open("PUT", location, **params)
+        try:
+            self.client._url_open("PUT", location, **params)
+        except minio_error.S3Error as err:
+            raise errors.DriverError(err)
+
         self.client._region_map[name] = location
         return {'id': name}
 
@@ -109,7 +114,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
 
     def upload(self, bucket_id, name, content, acl=None,
                multipart_threshold=None, multipart_chunksize=None,
-               max_concurrency=None,
+               max_concurrency=None, storage_class=None,
                **kwargs):
         acl = acl or self.default_object_acl
         multipart_threshold = multipart_threshold or base.MULTIPART_THRESHOLD
@@ -126,6 +131,8 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             params['part_size'] = multipart_chunksize
         if acl is not None:
             params['metadata']['x-amz-acl'] = acl
+        if storage_class:
+            params['metadata']['x-amz-storage-class'] = storage_class
         self.logger.debug("Put object params: %s", params)
         obj = self.client.put_object(**params)
         return {'name': name}
