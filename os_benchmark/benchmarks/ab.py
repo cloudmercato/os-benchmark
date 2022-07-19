@@ -45,7 +45,7 @@ class AbBenchmark(base.BaseSetupObjectsBenchmark):
             }
 
         for key, line in raw_data.items():
-            if key in ('test_time', 'transfered', 'request_rate', 'total_transfered'):
+            if key in ('test_time', 'transfered', 'request_rate', 'total_transfered', 'byte_rate'):
                 data[key] = self.re_digit.findall(line)[0]
             elif key in ('complete_requests', 'failed_requests', 'non_200_requests'):
                 data[key] = line.strip()
@@ -108,6 +108,9 @@ class AbBenchmark(base.BaseSetupObjectsBenchmark):
             'presigned': int(self.params['presigned']),
         }
         for field in self.timings[0]:
-            values = [float(r[field]) for r in self.timings if r[field].isdecimal()]
+            values = [
+                float(r[field]) for r in self.timings
+                if r[field].replace('.', '').isdecimal()
+            ]
             stats.update(self._make_aggr(values, field))
         return stats
