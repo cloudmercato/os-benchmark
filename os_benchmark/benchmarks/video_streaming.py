@@ -18,6 +18,8 @@ async def _download(session, url):
     try:
         async with session.get(url) as response:
             elapsed, _ = await utils.async_timeit(response.read)
+    except aiohttp.client_exceptions.ServerDisconnectedError as err:
+        return -1, err
     except aiohttp.client_exceptions.ClientResponseError as err:
         return -1, err
     except aiohttp.client_exceptions.ClientConnectorError as err:
@@ -178,6 +180,8 @@ class VideoStreamingBenchmark(base.BaseSetupObjectsBenchmark):
                     self.logger.exception(err)
                 if isinstance(err, aiohttp.client_exceptions.ClientConnectorError):
                     key = 'error_client'
+                elif isinstance(err, aiohttp.client_exceptions.ServerDisconnectedError):
+                    key = 'error_server'
                 elif isinstance(err, base.ASYNC_TIMEOUT_ERRORS):
                     key = 'error_timeout'
                 else:
