@@ -24,13 +24,6 @@ class Driver(s3.Driver):
     """AWS S3 Driver"""
     id = 'aws'
 
-    def _get_create_request_params(self, name, acl, **kwargs):
-        params = super()._get_create_request_params(name, acl, **kwargs)
-        params['CreateBucketConfiguration'] = {
-            'LocationConstraint': self.kwargs['region_name']
-        }
-        return params
-
     def get_url(self, bucket_id, name, **kwargs):
         url = '%s/%s/%s' % (self.kwargs['endpoint_url'], bucket_id, name)
         return url

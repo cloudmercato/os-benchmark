@@ -28,14 +28,6 @@ class Driver(s3.Driver):
     """T-Systems Open Cloud Telekom S3 Driver"""
     id = 'otc'
 
-    def _get_create_request_params(self, *args, **kwargs):
-        params = super()._get_create_request_params(*args, **kwargs)
-        if 'region_name' in self.kwargs:
-            params['CreateBucketConfiguration'] = {
-                'LocationConstraint': self.kwargs['region_name']
-            }
-        return params
-
     def get_url(self, bucket_id, name, **kwargs):
         url = '%s/%s/%s' % (self.kwargs['endpoint_url'], bucket_id, name)
         return url

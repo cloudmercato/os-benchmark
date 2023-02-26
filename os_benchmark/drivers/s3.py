@@ -116,10 +116,15 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         return buckets
 
     def _get_create_request_params(self, name, acl, **kwargs):
-        return {
+        params = {
             'Bucket': name,
             'ACL': acl,
         }
+        if 'region_name' in self.kwargs:
+            params['CreateBucketConfiguration'] = {
+                'LocationConstraint': self.kwargs['region_name']
+            }
+        return params
 
     @handle_request
     def create_bucket(self, name, acl=None, bucket_lock=None, **kwargs):
