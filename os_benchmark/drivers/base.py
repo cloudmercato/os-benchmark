@@ -143,7 +143,8 @@ class BaseDriver:
 
     def delete_objects(self, bucket_id, names, **kwargs):
         """Delete multiple objects from a bucket"""
-        raise NotImplementedError()
+        for name in names:
+            self.delete_object(bucket_id, name, **kwargs)
 
     def copy_object(self, bucket_id, name, dst_bucket_id, dst_name, **kwargs):
         """Copy object to another bucket"""
