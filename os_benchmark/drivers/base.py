@@ -1,6 +1,7 @@
 """
 Base Driver class module.
 """
+from urllib.parse import urljoin
 import logging
 
 import tenacity
@@ -104,6 +105,10 @@ class BaseDriver:
     def _validate_kwargs(self, kwargs):
         """Ensure kwargs passed to __init__ are correct."""
         return kwargs
+
+    def urljoin(self, *args):
+        """Helpers for joining endpoint URL and path"""
+        return urljoin(*args)
 
     def list_buckets(self, **kwargs):
         """List all buckets"""

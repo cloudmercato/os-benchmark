@@ -24,5 +24,6 @@ class Driver(s3.Driver):
     id = 'leviia'
 
     def get_url(self, bucket_id, name, **kwargs):
-        url = '%s/%s/%s' % (self.kwargs['endpoint_url'], bucket_id, name)
+        path = f"{bucket_id}/{name}"
+        url = self.urljoin(self.kwargs['endpoint_url'], path)
         return url
