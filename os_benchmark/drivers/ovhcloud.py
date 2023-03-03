@@ -15,7 +15,7 @@ Configuration
     user: <your_tenant_id>:<your_username>
     key: <your_password>
     tenant_name: "<your tenant_name>"
-    os_options: 
+    os_options:
       tenant_id: <your_tenant_id>
       region_name: <region_id>
       project_domain_name: <your_project_name>
