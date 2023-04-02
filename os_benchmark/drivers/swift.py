@@ -23,6 +23,7 @@ All parameters except ``driver`` will be passed to ``swiftclient.Connection``.
 """
 import swiftclient
 from swiftclient.service import SwiftService, SwiftUploadObject
+from keystoneauth1 import exceptions as keystone_exceptions
 from os_benchmark.drivers import base, errors
 
 
@@ -70,7 +71,13 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         headers = {}
         if acl == 'public-read':
             headers['X-Container-Read'] = '.r:*'
-        self.swift.put_container(name, headers=headers)
+        try:
+            self.swift.put_container(name, headers=headers)
+        except keystone_exceptions.BadRequest as err:
+            if err.http_status == 400:
+                if 'application credential' in err.message:
+                    raise errors.DriverAuthenticationError(err.message)
+            raise
         return {'id': name}
 
     def delete_bucket(self, bucket_id, **kwargs):

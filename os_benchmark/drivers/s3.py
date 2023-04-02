@@ -136,9 +136,11 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         self.logger.debug('Create bucket params: %s', params)
         try:
             bucket = self.s3.create_bucket(**params)
+        except botocore.exceptions.ConnectTimeoutError as err:
+            raise errors.DriverConnectionError(err)
         except botocore.exceptions.ClientError as err:
             code = err.response['Error']['Code']
-            msg = err.response['Error']['Message']
+            msg = err.response['Error'].get('Message', code)
             if code == 'NotImplemented':
                 raise errors.DriverFeatureUnsupported(msg)
             raise
