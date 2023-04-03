@@ -117,7 +117,11 @@ class BaseSetupObjectsBenchmark(BaseBenchmark):
         ))
 
     def _create_bucket(self, name=None):
-        bucket_name = name or utils.get_random_name(prefix=self.params.get('bucket_prefix'))
+        bucket_name = name or utils.get_random_name(
+            size=self.params.get('bucket_name_size', 30),
+            prefix=self.params.get('bucket_prefix'),
+            suffix=self.params.get('bucket_suffix'),
+        )
 
         self.logger.info("Creating bucket '%s'", bucket_name)
         self.storage_class = self.params.get('storage_class')

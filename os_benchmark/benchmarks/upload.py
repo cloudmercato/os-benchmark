@@ -13,7 +13,11 @@ class UploadBenchmark(base.BaseBenchmark):
         self.errors = []
         self.driver.setup(**self.params)
 
-        bucket_name = utils.get_random_name(prefix=self.params.get('bucket_prefix'))
+        bucket_name = utils.get_random_name(
+            size=self.params.get('bucket_name_size', 30),
+            prefix=self.params.get('bucket_prefix'),
+            suffix=self.params.get('bucket_suffix'),
+        )
         self.storage_class = self.params.get('storage_class')
         self.logger.debug("Creating bucket '%s'", bucket_name)
         self.bucket = self.driver.create_bucket(
@@ -24,7 +28,9 @@ class UploadBenchmark(base.BaseBenchmark):
     def run(self, **kwargs):
         def upload_files():
             for i in range(self.params['object_number']):
-                name = utils.get_random_name(prefix=self.params.get('object_prefix'))
+                name = utils.get_random_name(
+                    prefix=self.params.get('object_prefix'),
+                )
                 content = utils.get_random_content(self.params['object_size'])
 
                 self.logger.debug("Uploading object '%s'", name)

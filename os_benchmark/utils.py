@@ -75,13 +75,17 @@ def get_driver(config):
     return driver
 
 
-def get_random_name(size=30, prefix=None):
-    """Creates a random name"""
+def get_random_name(size=30, prefix=None, suffix=None):
+    """
+    Creates a random name with static prefix or suffix.
+    """
     name = faker.user_name()
     while len(name) < size:
         name += faker.user_name()
     if prefix:
-        name = prefix + name
+        name = prefix + name[len(prefix):size]
+    if suffix:
+        name = name[:size-len(suffix)] + suffix
     return name[:size]
 
 
@@ -116,3 +120,9 @@ def percentile(values, percent):
 
 def percentile95(values):
     return percentile(values, 95)
+
+
+def unescape(string):
+    if string.startswith('\\'):
+        return string[1:]
+    return string

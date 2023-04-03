@@ -15,6 +15,9 @@ Configuration
     app_id: <your_app_id>
     endpoint_url: https://cos.<zone_id>.myqcloud.com
 
+
+This driver will automatically add the ``app_id`` as suffix to new buckets.
+
 .. _boto3: https://github.com/boto/boto3
 """
 from os_benchmark.drivers import s3
