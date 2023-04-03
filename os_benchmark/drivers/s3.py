@@ -144,7 +144,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             if code == 'NotImplemented':
                 raise errors.DriverFeatureUnsupported(msg)
             raise
-        return {'id': name}
+        return {'id': bucket.name}
 
     @handle_request
     def delete_bucket(self, bucket_id, **kwargs):
