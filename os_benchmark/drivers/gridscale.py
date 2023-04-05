@@ -39,9 +39,10 @@ class Driver(s3.Driver):
     }
 
     def __init__(self, *args, **kwargs):
-        self.region = kwargs.pop('region')
-        endpoint_url = 'https://%s' % self.ENDPOINTS[self.region]
-        kwargs.setdefault('endpoint_url', endpoint_url)
+        if 'region' in kwargs:
+            self.region = kwargs.pop('region')
+            endpoint_url = 'https://%s' % self.ENDPOINTS[self.region]
+            kwargs.setdefault('endpoint_url', endpoint_url)
         super().__init__(*args, **kwargs)
 
     def get_url(self, bucket_id, name, **kwargs):
