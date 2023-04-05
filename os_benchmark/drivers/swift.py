@@ -73,6 +73,11 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             headers['X-Container-Read'] = '.r:*'
         try:
             self.swift.put_container(name, headers=headers)
+        except swiftclient.exceptions.ClientException as err:
+            msg = err.args[0]
+            if 'Authorization Failure' in msg:
+                raise errors.DriverAuthenticationError(msg)
+            raise
         except keystone_exceptions.BadRequest as err:
             if err.http_status == 400:
                 if 'application credential' in err.message:
