@@ -522,6 +522,16 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         )
         return url
 
+    def enable_bucket_website(self, bucket_id, **kwargs):
+        website_config = {
+            'ErrorDocument': {'Key': 'error.html'},
+            'IndexDocument': {'Suffix': 'ind ex.html'}
+        }
+        self.s3.meta.client.put_bucket_website(
+            Bucket=bucket_id,
+            WebsiteConfiguration=website_config,
+        )
+
     def get_url(self, bucket_id, name, presigned=True, **kwargs):
         if presigned:
             url = self.get_presigned_url(bucket_id, name)
