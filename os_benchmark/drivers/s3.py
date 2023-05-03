@@ -18,6 +18,7 @@ Configuration
 
 All parameters except ``driver`` will be passed to ``boto3.resource``.
 """
+import json
 from datetime import datetime, timedelta
 from functools import wraps
 from urllib.parse import urljoin
@@ -522,6 +523,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         )
         return url
 
+    @handle_request
     def enable_bucket_website(self, bucket_id, **kwargs):
         website_config = {
             'ErrorDocument': {'Key': 'error.html'},
@@ -538,3 +540,17 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         else:
             url = urljoin(self.kwargs['endpoint_url'], '%s/%s' % (bucket_id, name))
         return url
+
+    @handle_request
+    def put_bucket_policy(self, bucket_id, **kwargs):
+        policy = json.dumps({
+            "Statement": [{
+                "Action": ["s3:GetObject"],
+                "Effect": "Allow",
+                "Principal": {"AWS": ["*"]},
+                "Resource": [f"arn:aws:s3:::{bucket_id}/*"],
+                "Sid":"UCDefaultPublicPolicy"
+            }],
+            "Version": "2012-10-17"
+        })
+        self.s3.meta.client.put_bucket_policy(Bucket=bucket_id, Policy=policy)
