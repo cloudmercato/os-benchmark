@@ -59,6 +59,8 @@ def handle_request(method):
             raise errors.DriverConnectionError(err)
         except exception.B2RequestTimeoutDuringUpload as err:
             raise errors.DriverConnectionError(err)
+        except exception.TooManyRequests as err:
+            raise errors.DriverServerError(err)
     return _handle_request
 
 
@@ -75,7 +77,15 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                 self.kwargs['application_key_id'],
                 self.kwargs['application_key']
             )
-            retry = Retry(total=6)
+            retry = Retry(
+                total=self.retry,
+                connect=self.connect_retry,
+                read=self.read_retry,
+                status=self.status_retry,
+                status_forcelist=self.retry_status_codes,
+                backoff_factor=0,
+                redirect=0
+            )
             timeout = (self.connect_timeout, self.read_timeout)
             adapter = base.HTTPAdapter(max_retries=retry, timeout=timeout)
             self._client.raw_api.b2_http.session.mount('http://', adapter)
@@ -143,12 +153,12 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         def _upload(part_id, offset, content, file_id):
             self.logger.debug('Uploading %s part %s', name, part_id)
             part = base.MultiPart(content, multipart_chunksize)
-            upload_source = UploadSourceFileIo(content)
+            upload_source = UploadSourceFileIo(part)
             result = bucket.api.session.upload_part(
                 file_id=file_id,
                 part_number=part_id,
                 sha1_sum='do_not_verify',
-                content_length=content.size,
+                content_length=part.size,
                 input_stream=upload_source,
             )
             self.logger.debug('Done %s part %s', name, part_id)
@@ -174,7 +184,10 @@ class Driver(base.RequestsMixin, base.BaseDriver):
 
         bucket.api.session.finish_large_file(
             file_id=file_id,
-            part_sha1_array=[p['contentSha1'].replace('unverified:', '')  for p in parts],
+            part_sha1_array=[
+                p['contentSha1'].replace('unverified:', '')
+                for p in parts
+            ],
         )
 
     @handle_request
@@ -182,12 +195,19 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                multipart_chunksize=None, multipart_threshold=None,
                validate_content=False, **kwargs):
         multipart_threshold = multipart_threshold or base.MULTIPART_THRESHOLD
-        upload_source = UploadSourceFileIo(content)
+        multipart_chunksize = multipart_chunksize or base.MULTIPART_CHUNKSIZE
 
         try:
             if content.size > multipart_threshold:
-                self._multipart_upload(bucket_id, name, content, multipart_chunksize, max_concurrency)
+                self._multipart_upload(
+                    bucket_id,
+                    name,
+                    content,
+                    multipart_chunksize,
+                    max_concurrency
+                )
             else:
+                upload_source = UploadSourceFileIo(content)
                 self._simple_upload(bucket_id, name, upload_source)
         except exception.StorageCapExceeded as err:
             raise errors.DriverStorageQuotaError(err)

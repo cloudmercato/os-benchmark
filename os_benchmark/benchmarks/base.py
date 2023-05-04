@@ -98,12 +98,21 @@ class BaseSetupObjectsBenchmark(BaseBenchmark):
         content = utils.get_random_content(self.params['object_size'])
 
         self.logger.debug("Uploading object '%s'", name)
+        multipart_chunksize = self.params.get('upload_multipart_chunksize') or \
+            self.params.get('multipart_chunksize', 128*2**20)
+        multipart_threshold = self.params.get('upload_multipart_threshold') or \
+            self.params.get('multipart_threshold', 128*2**20)
+        max_concurrency = self.params.get('upload_max_concurrency') or \
+            self.params.get('max_concurrency')
         try:
             obj = self.driver.upload(
                 bucket_id=self.bucket_id,
                 storage_class=self.storage_class,
                 name=name,
                 content=content,
+                multipart_chunksize=multipart_chunksize,
+                multipart_threshold=multipart_threshold,
+                max_concurrency=max_concurrency,
             )
         except driver_errors.DriverError as err:
             self.logger.warning("Error during file uploading, tearing down the environment: %s", err)

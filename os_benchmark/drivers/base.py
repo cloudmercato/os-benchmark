@@ -18,6 +18,11 @@ MULTIPART_CHUNKSIZE = 64*2**20
 MAX_CONCURRENCY = 10
 CONNECT_TIMEOUT = 3
 READ_TIMEOUT = 1
+RETRY = 3
+RETRY_STATUS_CODE = (408, 413, 429, 500, 503, 504)
+CONNECT_RETRY = 3
+READ_RETRY = 1
+STATUS_RETRY = 3
 
 retry = tenacity.Retrying(
     wait=tenacity.wait_exponential(),
@@ -48,6 +53,9 @@ class MultiPart:
     def len(self):
         return self.size
 
+    def seek(self, pos, whence=0, /):
+        pass
+
 
 class MultiPartUploader:
     """Helper creating a thread pool and splitting file in several parts."""
@@ -56,6 +64,7 @@ class MultiPartUploader:
         self.max_concurrency = max_concurrency or MAX_CONCURRENCY
         self.extre_uplood_kwargs = extre_uplood_kwargs or {}
         self.multipart_chunksize = multipart_chunksize or MULTIPART_CHUNKSIZE
+        self.logger = logging.getLogger('osb.uploader')
 
     def run(self, upload_func):
         content_length = self.content.size
@@ -65,6 +74,7 @@ class MultiPartUploader:
 
         pool_kwargs = {'max_workers': self.max_concurrency}
         with concurrent.futures.ThreadPoolExecutor(**pool_kwargs) as executor:
+            self.logger.debug('Started uploader')
             while offset < content_length:
                 chunk_size = min(self.multipart_chunksize, content_length - offset)
                 result = executor.submit(
@@ -74,25 +84,47 @@ class MultiPartUploader:
                     offset=offset,
                     **self.extre_uplood_kwargs,
                 )
+                self.logger.debug('Submitted part %s (%s)', part_id, offset)
 
                 futures.append(result)
                 part_id += 1
-                offset += self.multipart_chunksize
+                offset += chunk_size
 
-            for future in futures:
+            self.logger.debug('Waiting all upload')
+            results = [
                 future.result()
-        return futures
+                for future in futures
+            ]
+        return results
 
 
 class BaseDriver:
     """Base Driver class"""
     id = None
+    retry = RETRY
     read_timeout = READ_TIMEOUT
     connect_timeout = CONNECT_TIMEOUT
+    retry_status_codes = RETRY_STATUS_CODE
+    read_retry = READ_RETRY
+    connect_retry = CONNECT_RETRY
+    status_retry = STATUS_RETRY
 
-    def __init__(self, read_timeout=None, connect_timeout=None, **kwargs):
+    def __init__(
+        self,
+        retry=None,
+        read_timeout=None,
+        connect_timeout=None,
+        read_retry=None,
+        connect_retry=None,
+        status_retry=None,
+        **kwargs
+    ):
+        self.retry = retry or self.retry
         self.read_timeout = read_timeout or self.read_timeout
         self.connect_timeout = connect_timeout or self.connect_timeout
+        self.read_retry = read_retry or self.read_retry
+        self.connect_retry = connect_retry or self.connect_retry
+        self.status_retry = status_retry or self.status_retry
         self.kwargs = self._validate_kwargs(kwargs)
         self.logger = logging.getLogger('osb.driver')
 
@@ -364,7 +396,15 @@ class RequestsMixin:
         if not hasattr(self, '_session'):
             self._session = requests.Session()
             self._session.headers = self.session_headers.copy()
-            retry = Retry(total=0)
+            retry = Retry(
+                total=self.retry,
+                connect=self.connect_retry,
+                read=self.read_retry,
+                status=self.status_retry,
+                status_forcelist=self.retry_status_codes,
+                backoff_factor=0,
+                redirect=0
+            )
             timeout = (self.connect_timeout, self.read_timeout)
             adapter = HTTPAdapter(max_retries=retry, timeout=timeout)
             self._session.mount('http://', adapter)

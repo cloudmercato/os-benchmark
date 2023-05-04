@@ -356,6 +356,9 @@ class Controller:
         self.subparser.add_argument('--object-size', type=int, required=False)
         self.subparser.add_argument('--object-number', type=int, required=False)
         self.subparser.add_argument('--object-prefix', required=False)
+        self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
+        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
+        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
         self.subparser.add_argument('--warmup-sleep', type=int, default=0)
         self.subparser.add_argument('--presigned', action="store_true")
         self.subparser.add_argument('--keep-objects', action="store_true")
@@ -370,6 +373,9 @@ class Controller:
             object_size=parsed_args.object_size,
             object_number=parsed_args.object_number,
             object_prefix=parsed_args.object_prefix,
+            multipart_threshold=parsed_args.multipart_threshold,
+            multipart_chunksize=parsed_args.multipart_chunksize,
+            max_concurrency=parsed_args.max_concurrency,
             presigned=parsed_args.presigned,
             warmup_sleep=parsed_args.warmup_sleep,
             keep_objects=parsed_args.keep_objects,
@@ -393,6 +399,9 @@ class Controller:
         self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
         self.subparser.add_argument('--process-number', type=int, default=MAX_CONCURRENCY)
         self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
+        self.subparser.add_argument('--upload-multipart-threshold', type=int, default=MULTIPART_THREHOLD)
+        self.subparser.add_argument('--upload-multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
+        self.subparser.add_argument('--upload-max-concurrency', type=int, default=MAX_CONCURRENCY)
         self.subparser.add_argument('--keep-objects', action="store_true")
         self.subparser.add_argument('--bucket-id', default=None)
         parsed_args = self.parser.parse_known_args()[0]
@@ -410,6 +419,9 @@ class Controller:
             multipart_chunksize=parsed_args.multipart_chunksize,
             process_number=parsed_args.process_number,
             max_concurrency=parsed_args.max_concurrency,
+            upload_multipart_threshold=parsed_args.upload_multipart_threshold,
+            upload_multipart_chunksize=parsed_args.upload_multipart_chunksize,
+            upload_max_concurrency=parsed_args.upload_max_concurrency,
             keep_objects=parsed_args.keep_objects,
             bucket_id=parsed_args.bucket_id,
         )
@@ -426,6 +438,9 @@ class Controller:
         self.subparser.add_argument('--object-size', type=int, required=False)
         self.subparser.add_argument('--object-number', type=int, required=False)
         self.subparser.add_argument('--object-prefix', required=False)
+        self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
+        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
+        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
         self.subparser.add_argument('--warmup-sleep', type=int, default=0)
         self.subparser.add_argument('--presigned', action="store_true")
         self.subparser.add_argument('--keep-objects', action="store_true")
@@ -440,6 +455,9 @@ class Controller:
             object_size=parsed_args.object_size,
             object_number=parsed_args.object_number,
             object_prefix=parsed_args.object_prefix,
+            multipart_threshold=parsed_args.multipart_threshold,
+            multipart_chunksize=parsed_args.multipart_chunksize,
+            max_concurrency=parsed_args.max_concurrency,
             presigned=parsed_args.presigned,
             warmup_sleep=parsed_args.warmup_sleep,
             keep_objects=parsed_args.keep_objects,
@@ -500,6 +518,9 @@ class Controller:
         self.subparser.add_argument('--object-size', type=int, required=False)
         self.subparser.add_argument('--object-number', type=int, required=False)
         self.subparser.add_argument('--object-prefix', required=False)
+        self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
+        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
+        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
         self.subparser.add_argument('--presigned', action="store_true")
         self.subparser.add_argument('--warmup-sleep', type=int, default=0)
         self.subparser.add_argument('--keep-alive', action="store_true")
@@ -515,6 +536,9 @@ class Controller:
             object_size=parsed_args.object_size,
             object_number=parsed_args.object_number,
             object_prefix=parsed_args.object_prefix,
+            multipart_threshold=parsed_args.multipart_threshold,
+            multipart_chunksize=parsed_args.multipart_chunksize,
+            max_concurrency=parsed_args.max_concurrency,
             presigned=parsed_args.presigned,
             warmup_sleep=parsed_args.warmup_sleep,
             keep_alive=parsed_args.keep_alive,
@@ -534,6 +558,9 @@ class Controller:
         self.subparser.add_argument('--object-size', type=int, required=False)
         self.subparser.add_argument('--object-number', type=int, required=False)
         self.subparser.add_argument('--object-prefix', required=False)
+        self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
+        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
+        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
         self.subparser.add_argument('--presigned', action="store_true")
         self.subparser.add_argument('--warmup-sleep', type=int, default=0)
         self.subparser.add_argument('--sleep-time', type=int, default=5)
@@ -552,6 +579,9 @@ class Controller:
             object_size=parsed_args.object_size,
             object_number=parsed_args.object_number,
             object_prefix=parsed_args.object_prefix,
+            multipart_threshold=parsed_args.multipart_threshold,
+            multipart_chunksize=parsed_args.multipart_chunksize,
+            max_concurrency=parsed_args.max_concurrency,
             presigned=parsed_args.presigned,
             warmup_sleep=parsed_args.warmup_sleep,
             sleep_time=parsed_args.sleep_time,
