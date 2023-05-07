@@ -1,0 +1,37 @@
+---
+stages:
+- lint
+- test
+- docs
+
+default:
+  image: python:3.9
+  cache:
+    paths:
+    - ~/.cache/pip/
+  before_script:
+  - pip install tox
+
+test:
+  stage: lint
+  script:
+    - tox -ve lint || echo $?
+
+test:
+  stage: test
+  script:
+    - tox -ve py39
+  coverage: '/TOTAL.+ ([0-9]{1,3}%)/'
+  artifacts:
+    name: "HTML coverage"
+    when: on_success
+    paths:
+    - htmlcov/
+
+documentation:
+  image: python:3.6
+  stage: docs
+  script:
+  - tox -v -e docs
+  only:
+  - master
