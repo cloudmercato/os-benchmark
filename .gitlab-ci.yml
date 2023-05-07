@@ -1,18 +1,18 @@
 ---
 stages:
-- lint
-- test
-- docs
+  - test
+  - lint
+  - docs
 
 default:
   image: python:3.9
   cache:
     paths:
-    - ~/.cache/pip/
+      - ~/.cache/pip/
   before_script:
-  - pip install tox
+    - pip install tox
 
-test:
+lint:
   stage: lint
   script:
     - tox -ve lint || echo $?
@@ -26,12 +26,12 @@ test:
     name: "HTML coverage"
     when: on_success
     paths:
-    - htmlcov/
+      - htmlcov/
 
 documentation:
-  image: python:3.6
+  $mage: python:3.9
   stage: docs
   script:
-  - tox -v -e docs
+    - tox -v -e docs
   only:
-  - master
+    - master
