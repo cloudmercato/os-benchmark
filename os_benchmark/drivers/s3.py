@@ -59,6 +59,8 @@ def handle_request(method):
             if code == 'InvalidAccessKeyId':
                 msg += " (endpoint: %s)" % self.s3.meta.client._endpoint.host
                 raise errors.DriverAuthenticationError(msg)
+            if code == 'AccountProblem':
+                raise errors.DriverAuthenticationError(msg)
             if code == 'NoSuchBucket':
                 raise errors.DriverBucketUnfoundError(msg)
             if code == 'AccessDenied':
