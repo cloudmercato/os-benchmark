@@ -29,7 +29,7 @@ test:
       - htmlcov/
 
 documentation:
-  $mage: python:3.9
+  image: python:3.9
   stage: docs
   script:
     - tox -v -e docs

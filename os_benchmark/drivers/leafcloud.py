@@ -22,8 +22,14 @@ from os_benchmark.drivers import s3
 class Driver(s3.Driver):
     """Leafcloud S3 Driver"""
     id = 'leafcloud'
+    default_config = {
+        's3': {
+            'addressing_style': 'auto',
+        }
+    }
 
-    def get_url(self, bucket_id, name, **kwargs):
-        path = f"{bucket_id}/{name}"
-        url = self.urljoin(self.kwargs['endpoint_url'], path)
+    def get_url(self, bucket_id, name, endpoint_type='public', **kwargs):
+        url = super().get_url(bucket_id, name, endpoint_type='public', **kwargs)
+        if endpoint_type == 'public':
+            self.put_bucket_policy(bucket_id)
         return url
