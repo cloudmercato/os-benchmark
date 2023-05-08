@@ -54,7 +54,11 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                     read=self.read_timeout,
                 ),
                 retries=urllib3.Retry(
-                    total=0,
+                    total=None,
+                    connect=self.connect_retry,
+                    read=self.read_retry,
+                    redirect=0,
+                    status=0,
                 )
             )
             self._client = Minio(

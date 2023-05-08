@@ -75,7 +75,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     default_config = {}
     _default_config = {
         'user_agent': base.USER_AGENT,
-        'retries': {'max_attempts': 0},
+        'retries': {'max_attempts': base.RETRY},
         'connect_timeout': base.CONNECT_TIMEOUT,
         'read_timeout': base.READ_TIMEOUT,
         'parameter_validation': False,

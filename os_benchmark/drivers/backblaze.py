@@ -93,6 +93,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             self._client.raw_api.b2_http.TIMEOUT = timeout
         return self._client
 
+    @handle_request
     def list_buckets(self, **kwargs):
         buckets = self.client.list_buckets()
         return [{'id': c.id_} for c in buckets]
