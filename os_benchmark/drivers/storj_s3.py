@@ -19,14 +19,13 @@ Possible region IDs are the following:
 
 .. _boto3: https://github.com/boto/boto3
 """
-from urllib.parse import urljoin
 from os_benchmark.drivers import s3
 
 
 class Driver(s3.Driver):
     """Storj S3 Driver"""
     id = 'storj'
-    endpoint_url = 'https://gateway.eu1.storjshare.io'
+    endpoint_url = 'https://gateway.storjshare.io'
     endpoint_urls = {
         'eu1': 'https://gateway.eu1.storjshare.io',
         'us1': 'https://gateway.us1.storjshare.io',
