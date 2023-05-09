@@ -89,6 +89,9 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         if verbosity == 4:
             boto3.set_stream_logger('botocore')
 
+    def get_custom_kwargs(self, kwargs):
+        return kwargs
+
     @property
     def s3(self):
         if not hasattr(self, '_s3'):
@@ -108,9 +111,6 @@ class Driver(base.RequestsMixin, base.BaseDriver):
 
             self._s3 = boto3.resource('s3', **kwargs)
         return self._s3
-
-    def get_custom_kwargs(self, kwargs):
-        return kwargs
 
     @handle_request
     def list_buckets(self, **kwargs):
