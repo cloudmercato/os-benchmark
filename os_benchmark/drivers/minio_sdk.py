@@ -20,9 +20,9 @@ Configuration
 
 All parameters except ``driver`` will be passed to ``minio.Minio``
 """
+import json
 import ssl
 import urllib3
-from urllib.parse import urljoin
 
 from minio import Minio
 from minio import error as minio_error
@@ -159,6 +159,19 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         )
         return url
 
+    def put_bucket_policy(self, bucket_id, **kwargs):
+        policy = json.dumps({
+            "Statement": [{
+                "Action": ["s3:GetObject"],
+                "Effect": "Allow",
+                "Principal": {"AWS": ["*"]},
+                "Resource": [f"arn:aws:s3:::{bucket_id}/*"],
+                "Sid":"UCDefaultPublicPolicy"
+            }],
+            "Version": "2012-10-17"
+        })
+        self.client.set_bucket_policy(bucket_id, policy)
+
     def get_url(self, bucket_id, name, presigned=True, **kwargs):
         if presigned:
             url = self.get_presigned_url(bucket_id, name)
@@ -166,5 +179,5 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             url = self.kwargs['url_template'] % self.kwargs
         else:
             hostname = 'https://' + self.kwargs['endpoint']
-            url = urljoin(hostname, '%s/%s' % (bucket_id, name))
+            url = self.urljoin(hostname, '%s/%s' % (bucket_id, name))
         return url

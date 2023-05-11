@@ -21,7 +21,6 @@ All parameters except ``driver`` will be passed to ``boto3.resource``.
 import json
 from datetime import datetime, timedelta
 from functools import wraps
-from urllib.parse import urljoin
 
 import botocore
 import boto3
@@ -529,18 +528,28 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     def enable_bucket_website(self, bucket_id, **kwargs):
         website_config = {
             'ErrorDocument': {'Key': 'error.html'},
-            'IndexDocument': {'Suffix': 'ind ex.html'}
+            'IndexDocument': {'Suffix': 'index.html'}
         }
         self.s3.meta.client.put_bucket_website(
             Bucket=bucket_id,
             WebsiteConfiguration=website_config,
         )
 
+    def get_endpoint_url(self):
+        if 'endpoint_url' in self.kwargs:
+            return self.kwargs['endpoint_url']
+        elif 'endpoint_url' in self.default_kwargs:
+            return self.default_kwargs['endpoint_url']
+        elif hasattr(self, 'endpoint_url'):
+            return self.endpoint_url
+
     def get_url(self, bucket_id, name, presigned=True, **kwargs):
         if presigned:
             url = self.get_presigned_url(bucket_id, name)
         else:
-            url = urljoin(self.kwargs['endpoint_url'], '%s/%s' % (bucket_id, name))
+            endpoint_url = self.get_endpoint_url()
+            path = '%s/%s' % (bucket_id, name)
+            url = self.urljoin(endpoint_url, path)
         return url
 
     @handle_request

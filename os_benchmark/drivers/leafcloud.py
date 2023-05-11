@@ -22,14 +22,11 @@ from os_benchmark.drivers import s3
 class Driver(s3.Driver):
     """Leafcloud S3 Driver"""
     id = 'leafcloud'
-    default_config = {
-        's3': {
-            'addressing_style': 'auto',
-        }
+    default_kwargs = {
+        'endpoint_url': 'https://leafcloud.store/',
     }
 
-    def get_url(self, bucket_id, name, endpoint_type='public', **kwargs):
-        url = super().get_url(bucket_id, name, endpoint_type='public', **kwargs)
-        if endpoint_type == 'public':
-            self.put_bucket_policy(bucket_id)
-        return url
+    def get_url(self, bucket_id, name, endpoint_type='public', presigned=True, **kwargs):
+        if not presigned:
+            self.logger.warn("Public object without presigned isn't available")
+        return super().get_url(bucket_id, name, presigned=True, **kwargs)
