@@ -542,6 +542,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             return self.default_kwargs['endpoint_url']
         elif hasattr(self, 'endpoint_url'):
             return self.endpoint_url
+        return self.s3.meta.client._endpoint.host
 
     def get_url(self, bucket_id, name, presigned=True, **kwargs):
         if presigned:

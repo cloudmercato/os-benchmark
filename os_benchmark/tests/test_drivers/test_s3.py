@@ -4,6 +4,7 @@ from io import BytesIO
 from os_benchmark.drivers import s3
 from os_benchmark.drivers import errors
 
+import boto3
 import botocore
 from botocore.stub import Stubber
 from botocore import exceptions
@@ -27,6 +28,26 @@ def mock_connection_error(func):
 class BaseS3Test(TestCase):
     def setUp(self):
         self.driver = s3.Driver()
+
+
+class S3Test(TestCase):
+    def test_property(self):
+        driver = s3.Driver()
+        self.assertIsInstance(
+            driver.s3,
+            boto3.resources.factory.ServiceResource
+        )
+
+    def test_params(self):
+        endpoint_url = "https://s3.cloud-mercato.com"
+        driver = s3.Driver(
+            endpoint_url=endpoint_url,
+            connect_timeout=52,
+            read_timeout=42,
+        )
+        self.assertEqual(driver.s3.meta.client._client_config.connect_timeout, 52)
+        self.assertEqual(driver.s3.meta.client._client_config.read_timeout, 42)
+        self.assertEqual(driver.s3.meta.client._endpoint.host, endpoint_url)
 
 
 class S3CreateBucketTest(BaseS3Test):
@@ -230,3 +251,130 @@ class S3DeleteObjectsTest(BaseS3Test):
             bucket_id='foo',
             names=[]
         )
+
+
+class S3CopyObjectTest(BaseS3Test):
+    @mock_s3
+    def test_delete_object(self):
+        # Setup
+        bucket_id = 'foo'
+        object_id = 'bar'
+        object2_id = 'ham'
+        self.driver.create_bucket(bucket_id)
+        self.driver.upload(
+            bucket_id=bucket_id,
+            name=object_id,
+            content=BytesIO(),
+        )
+        # Run
+        self.driver.copy_object(
+            bucket_id=bucket_id,
+            name=object_id,
+            dst_bucket_id=bucket_id,
+            dst_name=object2_id,
+        )
+        # Test
+        objs = self.driver.list_objects(bucket_id)
+        self.assertIn(object2_id, objs)
+
+
+class S3GeneratePresignedUrlTest(BaseS3Test):
+    @mock_s3
+    def test_func(self):
+        # Setup
+        bucket_id = 'foo'
+        object_id = 'bar'
+        self.driver.create_bucket(bucket_id)
+        self.driver.upload(
+            bucket_id=bucket_id,
+            name=object_id,
+            content=BytesIO(),
+        )
+        # Run
+        url = self.driver.get_presigned_url(
+            bucket_id=bucket_id,
+            name=object_id,
+        )
+        # Test
+        self.assertTrue(url.startswith('https://foo.s3.amazonaws.com/bar'))
+
+
+class S3GetEndpointUrlTest(BaseS3Test):
+    def tearDown(self):
+        s3.Driver.default_kwargs = {}
+        s3.Driver.endpoint_url = None
+
+    @mock_s3
+    def test_default(self):
+        url = self.driver.get_endpoint_url()
+        self.assertEqual(url, self.driver.s3.meta.client._endpoint.host)
+
+    @mock_s3
+    def test_kwargs(self):
+        endpoint_url = "https://s3.cloud-mercato.com"
+        self.driver = s3.Driver(endpoint_url=endpoint_url)
+        url = self.driver.get_endpoint_url()
+        self.assertEqual(url, endpoint_url)
+
+    @mock_s3
+    def test_default_kwargs(self):
+        endpoint_url = "https://def.s3.cloud-mercato.com"
+        self.driver = s3.Driver.default_kwargs['endpoint_url'] = endpoint_url
+        self.driver = s3.Driver()
+        url = self.driver.get_endpoint_url()
+        self.assertEqual(url, endpoint_url)
+
+    @mock_s3
+    def test_endpoint_url_attributes(self):
+        endpoint_url = "https://attr.s3.cloud-mercato.com"
+        self.driver = s3.Driver.endpoint_url = endpoint_url
+        self.driver = s3.Driver()
+        self.driver.endpoint_url = endpoint_url
+        url = self.driver.get_endpoint_url()
+        self.assertEqual(url, endpoint_url)
+
+
+class S3GetUrlTest(BaseS3Test):
+    def tearDown(self):
+        self.driver.default_kwargs = {}
+        self.driver.endpoint_url = None
+
+    @mock_s3
+    def test_presigned(self):
+        # Setup
+        bucket_id = 'foo'
+        object_id = 'bar'
+        self.driver.create_bucket(bucket_id)
+        self.driver.upload(
+            bucket_id=bucket_id,
+            name=object_id,
+            content=BytesIO(),
+        )
+        # Run
+        url = self.driver.get_url(
+            bucket_id=bucket_id,
+            name=object_id,
+            presigned=True
+        )
+        # Test
+        self.assertTrue(url.startswith('https://foo.s3.amazonaws.com/bar'))
+
+    @mock_s3
+    def test_not_presigned(self):
+        # Setup
+        bucket_id = 'foo'
+        object_id = 'bar'
+        self.driver.create_bucket(bucket_id)
+        self.driver.upload(
+            bucket_id=bucket_id,
+            name=object_id,
+            content=BytesIO(),
+        )
+        # Run
+        url = self.driver.get_presigned_url(
+            bucket_id=bucket_id,
+            name=object_id,
+            presigned=False
+        )
+        # Test
+        self.assertTrue(url.startswith('https://foo.s3.amazonaws.com/bar'))
