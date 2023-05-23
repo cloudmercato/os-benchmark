@@ -54,23 +54,23 @@ class MultiPart:
         return self.size
 
     def seek(self, pos, whence=0, /):
-        pass
+        self.offset = pos
 
 
 class MultiPartUploader:
     """Helper creating a thread pool and splitting file in several parts."""
-    def __init__(self, content, max_concurrency=None, multipart_chunksize=None, extre_uplood_kwargs=None):
+    def __init__(self, content, max_concurrency=None, multipart_chunksize=None, extra_upload_kwargs=None):
         self.content = content
         self.max_concurrency = max_concurrency or MAX_CONCURRENCY
-        self.extre_uplood_kwargs = extre_uplood_kwargs or {}
+        self.extra_upload_kwargs = extra_upload_kwargs or {}
         self.multipart_chunksize = multipart_chunksize or MULTIPART_CHUNKSIZE
         self.logger = logging.getLogger('osb.uploader')
+        self.futures = []
 
     def run(self, upload_func):
         content_length = self.content.size
         part_id = 1
         offset = 0
-        futures = []
 
         pool_kwargs = {'max_workers': self.max_concurrency}
         with concurrent.futures.ThreadPoolExecutor(**pool_kwargs) as executor:
@@ -82,18 +82,18 @@ class MultiPartUploader:
                     content=self.content,
                     part_id=part_id,
                     offset=offset,
-                    **self.extre_uplood_kwargs,
+                    **self.extra_upload_kwargs,
                 )
                 self.logger.debug('Submitted part %s (%s)', part_id, offset)
 
-                futures.append(result)
+                self.futures.append(result)
                 part_id += 1
                 offset += chunk_size
 
             self.logger.debug('Waiting all upload')
             results = [
                 future.result()
-                for future in futures
+                for future in self.futures
             ]
         return results
 

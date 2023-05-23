@@ -19,7 +19,7 @@ from functools import wraps
 import hashlib
 from requests.packages.urllib3.util.retry import Retry
 from b2sdk import v2 as b2
-from b2sdk import api, bucket as bucket_, exception, utils
+from b2sdk import api, exception
 from b2sdk.transfer.outbound.upload_source import AbstractUploadSource
 from os_benchmark.drivers import base, errors
 
@@ -177,7 +177,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             content=content,
             multipart_chunksize=multipart_chunksize,
             max_concurrency=max_concurrency,
-            extre_uplood_kwargs={
+            extra_upload_kwargs={
                 'file_id': file_id,
             }
         )

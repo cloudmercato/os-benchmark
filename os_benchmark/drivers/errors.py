@@ -48,3 +48,7 @@ class DriverStorageQuotaError(DriverError):
 
 class DriverFeatureUnsupported(DriverError):
     """The storage service doesn't implement a feature"""
+
+
+class DriverRateLimitError(DriverError):
+    """The storage service indicates the user has sent too many requests"""
