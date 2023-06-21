@@ -12,18 +12,24 @@ class UploadBenchmark(base.BaseBenchmark):
         self.objects = []
         self.errors = []
         self.driver.setup(**self.params)
-
-        bucket_name = utils.get_random_name(
-            size=self.params.get('bucket_name_size', 30),
-            prefix=self.params.get('bucket_prefix'),
-            suffix=self.params.get('bucket_suffix'),
-        )
         self.storage_class = self.params.get('storage_class')
-        self.logger.debug("Creating bucket '%s'", bucket_name)
-        self.bucket = self.driver.create_bucket(
-            name=bucket_name,
-            storage_class=self.storage_class,
-        )
+
+        if self.params.get('bucket_id'):
+            self.bucket_id = self.params['bucket_id']
+            self.logger.debug("Reuse bucket '%s'", self.bucket_id)
+            self.bucket = self.driver.get_bucket(bucket_id=self.bucket_id)
+        else:
+            bucket_name = utils.get_random_name(
+                size=self.params.get('bucket_name_size', 30),
+                prefix=self.params.get('bucket_prefix'),
+                suffix=self.params.get('bucket_suffix'),
+            )
+            self.logger.debug("Creating bucket '%s'", bucket_name)
+            self.bucket = self.driver.create_bucket(
+                name=bucket_name,
+                storage_class=self.storage_class,
+            )
+            self.bucket_id = self.bucket['id']
 
     def run(self, **kwargs):
         def upload_files():
@@ -71,6 +77,7 @@ class UploadBenchmark(base.BaseBenchmark):
         bw = (total_size/test_time/2**20) if test_time else 0
         stats = {
             'operation': 'upload',
+            'bucket_id': self.bucket_id,
             'ops': count,
             'time': self.total_time,
             'bw': bw,

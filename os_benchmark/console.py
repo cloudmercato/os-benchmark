@@ -177,6 +177,7 @@ class Controller:
         content_group.add_argument('--', '--from-stdin', default=False, action='store_true', dest='from_stdin')
         self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
         self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
+        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
         parsed_args = self.parser.parse_known_args()[0]
 
         name = parsed_args.name or utils.get_random_name()
@@ -328,6 +329,7 @@ class Controller:
         self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
         self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
         self.subparser.add_argument('--keep-objects', action="store_true")
+        self.subparser.add_argument('--bucket-id', default=None)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.UploadBenchmark(self.driver)
@@ -342,6 +344,7 @@ class Controller:
             multipart_chunksize=parsed_args.multipart_chunksize,
             max_concurrency=parsed_args.max_concurrency,
             keep_objects=parsed_args.keep_objects,
+            bucket_id=parsed_args.bucket_id,
         )
         benchmark.setup()
         benchmark.run()
