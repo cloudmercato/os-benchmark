@@ -1,9 +1,26 @@
+from os_benchmark import utils
 from os_benchmark import errors
 from . import base
 
 
 class DownloadBenchmark(base.BaseSetupObjectsBenchmark):
     """Time objects downloading"""
+    @staticmethod
+    def make_parser_args(parser):
+        parser.add_argument('--storage-class', required=False)
+        parser.add_argument('--bucket-prefix', required=False, type=utils.unescape)
+        parser.add_argument('--bucket-suffix', required=False, type=utils.unescape)
+        parser.add_argument('--object-size', type=int, required=False)
+        parser.add_argument('--object-number', type=int, required=False)
+        parser.add_argument('--object-prefix', required=False)
+        parser.add_argument('--multipart-threshold', type=int, default=base.MULTIPART_THREHOLD)
+        parser.add_argument('--multipart-chunksize', type=int, default=base.MULTIPART_CHUNKSIZE)
+        parser.add_argument('--max-concurrency', type=int, default=base.MAX_CONCURRENCY)
+        parser.add_argument('--warmup-sleep', type=int, default=0)
+        parser.add_argument('--presigned', action="store_true")
+        parser.add_argument('--keep-objects', action="store_true")
+        parser.add_argument('--bucket-id', default=None)
+
     def run(self, **kwargs):
         def download_objets(urls):
             for url in urls:

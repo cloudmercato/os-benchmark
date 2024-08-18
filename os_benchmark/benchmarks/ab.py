@@ -1,5 +1,6 @@
 import re
 import subprocess
+from os_benchmark import utils
 from os_benchmark import errors
 from . import base
 
@@ -23,6 +24,24 @@ class AbBenchmark(base.BaseSetupObjectsBenchmark):
     }
     stat_fields = ('min', 'mean', 'stddev', 'median', 'max')
     re_digit = re.compile('\s*([\d.]+)\s*')
+
+    @staticmethod
+    def make_parser_args(parser):
+        parser.add_argument('--storage-class', required=False)
+        parser.add_argument('--bucket-prefix', required=False, type=utils.unescape)
+        parser.add_argument('--bucket-suffix', required=False, type=utils.unescape)
+        parser.add_argument('--object-size', type=int, required=False)
+        parser.add_argument('--object-number', type=int, required=False)
+        parser.add_argument('--object-prefix', required=False)
+        parser.add_argument('--presigned', action="store_true")
+        parser.add_argument('--warmup-sleep', type=int, default=0)
+        parser.add_argument('--concurrency', type=int, default=1)
+        parser.add_argument('--timelimit', type=int, default=30)
+        parser.add_argument('--num-requests', type=int, default=100)
+        parser.add_argument('--keep-alive', action="store_true")
+        parser.add_argument('--source-address', required=False)
+        parser.add_argument('--keep-objects', action="store_true")
+        parser.add_argument('--bucket-id', default=None)
 
     def parse_ab(self, stdout):
         raw_data = dict([
@@ -110,6 +129,7 @@ class AbBenchmark(base.BaseSetupObjectsBenchmark):
         for field in self.timings[0]:
             values = [
                 float(r[field]) for r in self.timings
+                if field in r
                 if r[field].replace('.', '').isdecimal()
             ]
             stats.update(self._make_aggr(values, field))

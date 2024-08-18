@@ -7,6 +7,18 @@ from . import base
 
 class TcpPingBenchmark(base.BaseNetworkBenchmark):
     """Time ping endpoint"""
+    @staticmethod
+    def make_parser_args(parser):
+        parser.add_argument('--storage-class', required=False)
+        parser.add_argument('--object-size', type=int, default=1)
+        parser.add_argument('--warmup-sleep', type=int, default=0)
+        parser.add_argument('--keep-objects', action="store_true")
+        parser.add_argument('--bucket-id', default=None)
+        parser.add_argument('--ttl', type=int, default=120)
+        parser.add_argument('--timeout', type=int, default=5)
+        parser.add_argument('--count', type=int, default=5)
+        parser.add_argument('--scapy-verbose', type=int, choices=(0, 1, 2), default=0)
+
     def _ping(self, ip, port):
         packet = scapy.IP(dst=ip, ttl=self.params['ttl']) / \
             scapy.TCP(dport=port, flags="S")

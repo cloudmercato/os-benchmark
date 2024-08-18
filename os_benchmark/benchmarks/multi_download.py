@@ -1,20 +1,42 @@
 import concurrent
 import requests
 from os_benchmark import utils
-from . import base
+from . import base, errors
 
 
 def _download(session, url, b_range):
     headers = {'Range': 'bytes=%s-%s' % b_range}
-    session.get(url, headers=headers)
+    try:
+        session.get(url, headers=headers)
+    except requests.exceptions.ChunkedEncodingError as err:
+        raise errors.ConnectionError(err)
 
 
 class MultiDownloadBenchmark(base.BaseSetupObjectsBenchmark):
     """Time objects downloading using multi-range"""
+    @staticmethod
+    def make_parser_args(parser):
+        parser.add_argument('--storage-class', required=False)
+        parser.add_argument('--bucket-prefix', required=False, type=utils.unescape)
+        parser.add_argument('--bucket-suffix', required=False, type=utils.unescape)
+        parser.add_argument('--object-size', type=int, required=False)
+        parser.add_argument('--object-number', type=int, required=False)
+        parser.add_argument('--object-prefix', required=False)
+        parser.add_argument('--presigned', action="store_true")
+        parser.add_argument('--warmup-sleep', type=int, default=0)
+        parser.add_argument('--multipart-chunksize', type=int, default=base.MULTIPART_CHUNKSIZE)
+        parser.add_argument('--process-number', type=int, default=base.MAX_CONCURRENCY)
+        parser.add_argument('--max-concurrency', type=int, default=base.MAX_CONCURRENCY)
+        parser.add_argument('--upload-multipart-threshold', type=int, default=base.MULTIPART_THREHOLD)
+        parser.add_argument('--upload-multipart-chunksize', type=int, default=base.MULTIPART_CHUNKSIZE)
+        parser.add_argument('--upload-max-concurrency', type=int, default=base.MAX_CONCURRENCY)
+        parser.add_argument('--keep-objects', action="store_true")
+        parser.add_argument('--bucket-id', default=None)
+
     def setup(self):
         if self.params.get('multipart_chunksize'):
             self.multipart_chunksize = self.params.get('multipart_chunksize')
-        elif self.params['object_size'] < (64*2**20): # 64MB
+        elif self.params['object_size'] < (64*2**20):  # 64MB
             self.multipart_chunksize = self.params['object_size']
         else:
             self.multipart_chunksize = 64*2**20
@@ -32,7 +54,6 @@ class MultiDownloadBenchmark(base.BaseSetupObjectsBenchmark):
             futures = []
             for i in range(self.chunk_number):
                 b_range = (i*self.multipart_chunksize, min(i*self.multipart_chunksize+self.multipart_chunksize, self.params['object_size']-1))
-                headers = {'Range': 'bytes=%s-%s' % b_range}
                 futures.append(pool.submit(
                     _download,
                     self.session,
@@ -41,6 +62,9 @@ class MultiDownloadBenchmark(base.BaseSetupObjectsBenchmark):
                 ))
             for future in futures:
                 while not future.done():
+                    if future.exception():
+                        self.errors.append(future.exception())
+                        break
                     future.result()
 
         def run():

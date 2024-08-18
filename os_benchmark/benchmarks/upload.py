@@ -5,6 +5,20 @@ from . import base
 
 class UploadBenchmark(base.BaseBenchmark):
     """Time objects uploading"""
+    @staticmethod
+    def make_parser_args(parser):
+        parser.add_argument('--storage-class', required=False)
+        parser.add_argument('--bucket-prefix', required=False, type=utils.unescape)
+        parser.add_argument('--bucket-suffix', required=False, type=utils.unescape)
+        parser.add_argument('--object-size', type=int, required=True)
+        parser.add_argument('--object-number', type=int, required=True)
+        parser.add_argument('--object-prefix', required=False)
+        parser.add_argument('--multipart-threshold', type=int, default=base.MULTIPART_THREHOLD)
+        parser.add_argument('--multipart-chunksize', type=int, default=base.MULTIPART_CHUNKSIZE)
+        parser.add_argument('--max-concurrency', type=int, default=base.MAX_CONCURRENCY)
+        parser.add_argument('--keep-objects', action="store_true")
+        parser.add_argument('--bucket-id', default=None)
+
     def setup(self):
         self.logger.debug("Bench params '%s'", self.params)
 

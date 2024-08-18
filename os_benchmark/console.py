@@ -25,6 +25,7 @@ ACTIONS = (
     'copy-object',
     'clean-bucket',
     'clean',
+
     'time-upload',
     'time-download',
     'time-multi-download',
@@ -319,17 +320,7 @@ class Controller:
         self.driver.clean()
 
     def time_upload(self):
-        self.subparser.add_argument('--storage-class', required=False)
-        self.subparser.add_argument('--bucket-prefix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--bucket-suffix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--object-size', type=int, required=True)
-        self.subparser.add_argument('--object-number', type=int, required=True)
-        self.subparser.add_argument('--object-prefix', required=False)
-        self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
-        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
-        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
-        self.subparser.add_argument('--keep-objects', action="store_true")
-        self.subparser.add_argument('--bucket-id', default=None)
+        benchmarks.UploadBenchmark.make_parser_args(self.subparser)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.UploadBenchmark(self.driver)
@@ -353,19 +344,7 @@ class Controller:
         self.print_stats(stats)
 
     def time_download(self):
-        self.subparser.add_argument('--storage-class', required=False)
-        self.subparser.add_argument('--bucket-prefix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--bucket-suffix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--object-size', type=int, required=False)
-        self.subparser.add_argument('--object-number', type=int, required=False)
-        self.subparser.add_argument('--object-prefix', required=False)
-        self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
-        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
-        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
-        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
-        self.subparser.add_argument('--presigned', action="store_true")
-        self.subparser.add_argument('--keep-objects', action="store_true")
-        self.subparser.add_argument('--bucket-id', default=None)
+        benchmarks.DownloadBenchmark.make_parser_args(self.subparser)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.DownloadBenchmark(self.driver)
@@ -391,22 +370,7 @@ class Controller:
         self.print_stats(stats)
 
     def time_multi_download(self):
-        self.subparser.add_argument('--storage-class', required=False)
-        self.subparser.add_argument('--bucket-prefix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--bucket-suffix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--object-size', type=int, required=False)
-        self.subparser.add_argument('--object-number', type=int, required=False)
-        self.subparser.add_argument('--object-prefix', required=False)
-        self.subparser.add_argument('--presigned', action="store_true")
-        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
-        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
-        self.subparser.add_argument('--process-number', type=int, default=MAX_CONCURRENCY)
-        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
-        self.subparser.add_argument('--upload-multipart-threshold', type=int, default=MULTIPART_THREHOLD)
-        self.subparser.add_argument('--upload-multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
-        self.subparser.add_argument('--upload-max-concurrency', type=int, default=MAX_CONCURRENCY)
-        self.subparser.add_argument('--keep-objects', action="store_true")
-        self.subparser.add_argument('--bucket-id', default=None)
+        benchmarks.MultiDownloadBenchmark.make_parser_args(self.subparser)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.MultiDownloadBenchmark(self.driver)
@@ -435,19 +399,7 @@ class Controller:
         self.print_stats(stats)
 
     def time_copy(self):
-        self.subparser.add_argument('--storage-class', required=False)
-        self.subparser.add_argument('--bucket-prefix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--bucket-suffix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--object-size', type=int, required=False)
-        self.subparser.add_argument('--object-number', type=int, required=False)
-        self.subparser.add_argument('--object-prefix', required=False)
-        self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
-        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
-        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
-        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
-        self.subparser.add_argument('--presigned', action="store_true")
-        self.subparser.add_argument('--keep-objects', action="store_true")
-        self.subparser.add_argument('--bucket-id', default=None)
+        benchmarks.CopyBenchmark.make_parser_args(self.subparser)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.CopyBenchmark(self.driver)
@@ -473,21 +425,7 @@ class Controller:
         self.print_stats(stats)
 
     def ab(self):
-        self.subparser.add_argument('--storage-class', required=False)
-        self.subparser.add_argument('--bucket-prefix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--bucket-suffix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--object-size', type=int, required=False)
-        self.subparser.add_argument('--object-number', type=int, required=False)
-        self.subparser.add_argument('--object-prefix', required=False)
-        self.subparser.add_argument('--presigned', action="store_true")
-        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
-        self.subparser.add_argument('--concurrency', type=int, default=1)
-        self.subparser.add_argument('--timelimit', type=int, default=30)
-        self.subparser.add_argument('--num-requests', type=int, default=100)
-        self.subparser.add_argument('--keep-alive', action="store_true")
-        self.subparser.add_argument('--source-address', required=False)
-        self.subparser.add_argument('--keep-objects', action="store_true")
-        self.subparser.add_argument('--bucket-id', default=None)
+        benchmarks.AbBenchmark.make_parser_args(self.subparser)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.AbBenchmark(self.driver)
@@ -515,20 +453,7 @@ class Controller:
         self.print_stats(stats)
 
     def curl(self):
-        self.subparser.add_argument('--storage-class', required=False)
-        self.subparser.add_argument('--bucket-prefix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--bucket-suffix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--object-size', type=int, required=False)
-        self.subparser.add_argument('--object-number', type=int, required=False)
-        self.subparser.add_argument('--object-prefix', required=False)
-        self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
-        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
-        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
-        self.subparser.add_argument('--presigned', action="store_true")
-        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
-        self.subparser.add_argument('--keep-alive', action="store_true")
-        self.subparser.add_argument('--keep-objects', action="store_true")
-        self.subparser.add_argument('--bucket-id', default=None)
+        benchmarks.PycurlbBenchmark.make_parser_args(self.subparser)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.PycurlbBenchmark(self.driver)
@@ -555,23 +480,7 @@ class Controller:
         self.print_stats(stats)
 
     def video_streaming(self):
-        self.subparser.add_argument('--storage-class', required=False)
-        self.subparser.add_argument('--bucket-prefix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--bucket-suffix', required=False, type=utils.unescape)
-        self.subparser.add_argument('--object-size', type=int, required=False)
-        self.subparser.add_argument('--object-number', type=int, required=False)
-        self.subparser.add_argument('--object-prefix', required=False)
-        self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
-        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
-        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
-        self.subparser.add_argument('--presigned', action="store_true")
-        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
-        self.subparser.add_argument('--sleep-time', type=int, default=5)
-        self.subparser.add_argument('--client-number', type=int, default=1)
-        self.subparser.add_argument('--process-number', type=int, default=1)
-        self.subparser.add_argument('--delay-time', type=float, default=.25)
-        self.subparser.add_argument('--keep-objects', action="store_true")
-        self.subparser.add_argument('--bucket-id', default=None)
+        benchmarks.VideoStreamingBenchmark.make_parser_args(self.subparser)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.VideoStreamingBenchmark(self.driver)
@@ -601,15 +510,7 @@ class Controller:
         self.print_stats(stats)
 
     def ping(self):
-        self.subparser.add_argument('--storage-class', required=False)
-        self.subparser.add_argument('--object-size', type=int, default=1)
-        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
-        self.subparser.add_argument('--keep-objects', action="store_true")
-        self.subparser.add_argument('--bucket-id', default=None)
-        self.subparser.add_argument('--ttl', type=int, default=120)
-        self.subparser.add_argument('--timeout', type=int, default=5)
-        self.subparser.add_argument('--count', type=int, default=5)
-        self.subparser.add_argument('--scapy-verbose', type=int, choices=(0, 1, 2), default=0)
+        benchmarks.PingBenchmark.make_parser_args(self.subparser)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.PingBenchmark(self.driver)
@@ -635,15 +536,7 @@ class Controller:
         self.print_stats(stats)
 
     def tcpping(self):
-        self.subparser.add_argument('--storage-class', required=False)
-        self.subparser.add_argument('--object-size', type=int, default=1)
-        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
-        self.subparser.add_argument('--keep-objects', action="store_true")
-        self.subparser.add_argument('--bucket-id', default=None)
-        self.subparser.add_argument('--ttl', type=int, default=120)
-        self.subparser.add_argument('--timeout', type=int, default=5)
-        self.subparser.add_argument('--count', type=int, default=5)
-        self.subparser.add_argument('--scapy-verbose', type=int, choices=(0, 1, 2), default=0)
+        benchmarks.TcpPingBenchmark.make_parser_args(self.subparser)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.TcpPingBenchmark(self.driver)
@@ -669,15 +562,7 @@ class Controller:
         self.print_stats(stats)
 
     def traceroute(self):
-        self.subparser.add_argument('--storage-class', required=False)
-        self.subparser.add_argument('--object-size', type=int, default=1)
-        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
-        self.subparser.add_argument('--keep-objects', action="store_true")
-        self.subparser.add_argument('--bucket-id', default=None)
-        self.subparser.add_argument('--max-ttl', type=int, default=30)
-        self.subparser.add_argument('--timeout', type=int, default=3)
-        self.subparser.add_argument('--count', type=int, default=3)
-        self.subparser.add_argument('--scapy-verbose', type=int, choices=(0, 1, 2), default=0)
+        benchmarks.TracerouteBenchmark.make_parser_args(self.subparser)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.TracerouteBenchmark(self.driver)
@@ -703,15 +588,7 @@ class Controller:
         self.print_stats(stats)
 
     def tcptraceroute(self):
-        self.subparser.add_argument('--storage-class', required=False)
-        self.subparser.add_argument('--object-size', type=int, default=1)
-        self.subparser.add_argument('--warmup-sleep', type=int, default=0)
-        self.subparser.add_argument('--keep-objects', action="store_true")
-        self.subparser.add_argument('--bucket-id', default=None)
-        self.subparser.add_argument('--max-ttl', type=int, default=30)
-        self.subparser.add_argument('--timeout', type=int, default=3)
-        self.subparser.add_argument('--count', type=int, default=3)
-        self.subparser.add_argument('--scapy-verbose', type=int, choices=(0, 1, 2), default=0)
+        benchmarks.TcpTracerouteBenchmark.make_parser_args(self.subparser)
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.TcpTracerouteBenchmark(self.driver)
@@ -768,6 +645,8 @@ def main():
         controller.run()
     except KeyboardInterrupt:
         print("Stopped by user")
+        if logger_.logger.level <= 10:
+            raise
         sys.exit(2)
     except errors.OsbError as err:
         if logger_.logger.level <= 0:

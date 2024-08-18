@@ -16,6 +16,11 @@ except ImportError:
 from os_benchmark import utils
 from os_benchmark.drivers import errors as driver_errors
 
+
+MULTIPART_THREHOLD = 64 * 2**20
+MULTIPART_CHUNKSIZE = 8 * 2**20
+MAX_CONCURRENCY = os.cpu_count() * 2
+
 if aiohttp is not None:
     ASYNC_TIMEOUT_ERRORS = (
         asyncio.TimeoutError,

@@ -7,6 +7,18 @@ from . import base
 
 class TracerouteBenchmark(base.BaseNetworkBenchmark):
     """Traceroute endpoint"""
+    @staticmethod
+    def make_parser_args(parser):
+        parser.add_argument('--storage-class', required=False)
+        parser.add_argument('--object-size', type=int, default=1)
+        parser.add_argument('--warmup-sleep', type=int, default=0)
+        parser.add_argument('--keep-objects', action="store_true")
+        parser.add_argument('--bucket-id', default=None)
+        parser.add_argument('--max-ttl', type=int, default=30)
+        parser.add_argument('--timeout', type=int, default=3)
+        parser.add_argument('--count', type=int, default=3)
+        parser.add_argument('--scapy-verbose', type=int, choices=(0, 1, 2), default=0)
+
     def _traceroute(self, ip):
         replies = []
         for ttl in range(self.params['max_ttl']):
