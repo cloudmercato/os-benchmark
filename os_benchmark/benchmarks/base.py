@@ -113,7 +113,7 @@ class BaseSetupObjectsBenchmark(BaseBenchmark):
         )
         self.bucket_id = self.bucket['id']
 
-        max_workers = min(2, max(os.cpu_count(), 64))
+        max_workers = self.params.get('parallel_objects') or min(2, max(os.cpu_count(), 64))
         futures = []
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             for i in range(self.params['object_number']):

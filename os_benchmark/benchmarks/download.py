@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from os_benchmark import utils
 from os_benchmark import errors
 from . import base
@@ -20,18 +21,23 @@ class DownloadBenchmark(base.BaseSetupObjectsBenchmark):
         parser.add_argument('--presigned', action="store_true")
         parser.add_argument('--keep-objects', action="store_true")
         parser.add_argument('--bucket-id', default=None)
+        parser.add_argument('--parallel-objects', type=int, default=1)
 
     def run(self, **kwargs):
+        def download_objet(url):
+            try:
+                elapsed = self.timeit(
+                    self.driver.download,
+                    url=url,
+                )[0]
+                self.timings.append(elapsed)
+            except errors.InvalidHttpCode as err:
+                self.errors.append(err)
+
         def download_objets(urls):
-            for url in urls:
-                try:
-                    elapsed = self.timeit(
-                        self.driver.download,
-                        url=url,
-                    )[0]
-                    self.timings.append(elapsed)
-                except errors.InvalidHttpCode as err:
-                    self.errors.append(err)
+            with ThreadPoolExecutor(max_workers=self.params['parallel_objects']) as executor:
+                for url in urls:
+                    executor.submit(download_objet, url=url)
 
         self.sleep(self.params['warmup_sleep'])
         self.total_time = self.timeit(download_objets, urls=self.urls)[0]

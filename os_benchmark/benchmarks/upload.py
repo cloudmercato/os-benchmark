@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from os_benchmark import utils
 from os_benchmark.drivers import errors as driver_errors
 from . import base
@@ -18,6 +19,7 @@ class UploadBenchmark(base.BaseBenchmark):
         parser.add_argument('--max-concurrency', type=int, default=base.MAX_CONCURRENCY)
         parser.add_argument('--keep-objects', action="store_true")
         parser.add_argument('--bucket-id', default=None)
+        parser.add_argument('--parallel-objects', type=int, default=1)
 
     def setup(self):
         self.logger.debug("Bench params '%s'", self.params)
@@ -46,31 +48,34 @@ class UploadBenchmark(base.BaseBenchmark):
             self.bucket_id = self.bucket['id']
 
     def run(self, **kwargs):
-        def upload_files():
-            for i in range(self.params['object_number']):
-                name = utils.get_random_name(
-                    prefix=self.params.get('object_prefix'),
+        def upload_file():
+            name = utils.get_random_name(
+                prefix=self.params.get('object_prefix'),
+            )
+            content = utils.get_random_content(self.params['object_size'])
+
+            self.logger.debug("Uploading object '%s'", name)
+            try:
+                elapsed, obj = self.timeit(
+                    self.driver.upload,
+                    bucket_id=self.bucket['id'],
+                    storage_class=self.storage_class,
+                    name=name,
+                    content=content,
+                    multipart_threshold=self.params['multipart_threshold'],
+                    multipart_chunksize=self.params['multipart_chunksize'],
+                    max_concurrency=self.params['max_concurrency'],
                 )
-                content = utils.get_random_content(self.params['object_size'])
+                self.timings.append(elapsed)
+                self.objects.append(obj)
+            except driver_errors.DriverConnectionError as err:
+                self.logger.error(err)
+                self.errors.append(err)
 
-                self.logger.debug("Uploading object '%s'", name)
-                try:
-                    elapsed, obj = self.timeit(
-                        self.driver.upload,
-                        bucket_id=self.bucket['id'],
-                        storage_class=self.storage_class,
-                        name=name,
-                        content=content,
-                        multipart_threshold=self.params['multipart_threshold'],
-                        multipart_chunksize=self.params['multipart_chunksize'],
-                        max_concurrency=self.params['max_concurrency'],
-                    )
-                    self.timings.append(elapsed)
-                    self.objects.append(obj)
-                except driver_errors.DriverConnectionError as err:
-                    self.logger.error(err)
-                    self.errors.append(err)
-
+        def upload_files():
+            with ThreadPoolExecutor(max_workers=self.params['parallel_objects']) as executor:
+                for i in range(self.params['object_number']):
+                    executor.submit(upload_file)
 
         self.total_time = self.timeit(upload_files)[0]
 
@@ -92,6 +97,7 @@ class UploadBenchmark(base.BaseBenchmark):
         stats = {
             'operation': 'upload',
             'bucket_id': self.bucket_id,
+            'parallel_objects': self.params['parallel_objects'],
             'ops': count,
             'time': self.total_time,
             'bw': bw,

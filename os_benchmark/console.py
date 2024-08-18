@@ -324,19 +324,7 @@ class Controller:
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.UploadBenchmark(self.driver)
-        benchmark.set_params(
-            storage_class=parsed_args.storage_class,
-            bucket_prefix=parsed_args.bucket_prefix,
-            bucket_suffix=parsed_args.bucket_suffix,
-            object_size=parsed_args.object_size,
-            object_number=parsed_args.object_number,
-            object_prefix=parsed_args.object_prefix,
-            multipart_threshold=parsed_args.multipart_threshold,
-            multipart_chunksize=parsed_args.multipart_chunksize,
-            max_concurrency=parsed_args.max_concurrency,
-            keep_objects=parsed_args.keep_objects,
-            bucket_id=parsed_args.bucket_id,
-        )
+        benchmark.set_params(**vars(parsed_args))
         benchmark.setup()
         benchmark.run()
         benchmark.tear_down()
@@ -348,21 +336,7 @@ class Controller:
         parsed_args = self.parser.parse_known_args()[0]
 
         benchmark = benchmarks.DownloadBenchmark(self.driver)
-        benchmark.set_params(
-            storage_class=parsed_args.storage_class,
-            bucket_prefix=parsed_args.bucket_prefix,
-            bucket_suffix=parsed_args.bucket_suffix,
-            object_size=parsed_args.object_size,
-            object_number=parsed_args.object_number,
-            object_prefix=parsed_args.object_prefix,
-            multipart_threshold=parsed_args.multipart_threshold,
-            multipart_chunksize=parsed_args.multipart_chunksize,
-            max_concurrency=parsed_args.max_concurrency,
-            presigned=parsed_args.presigned,
-            warmup_sleep=parsed_args.warmup_sleep,
-            keep_objects=parsed_args.keep_objects,
-            bucket_id=parsed_args.bucket_id,
-        )
+        benchmark.set_params(**vars(parsed_args))
         benchmark.setup()
         benchmark.run()
         benchmark.tear_down()
