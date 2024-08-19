@@ -1,4 +1,4 @@
-import concurrent
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import requests
 from os_benchmark import utils
 from . import base, errors
@@ -32,6 +32,7 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
         parser.add_argument('--upload-max-concurrency', type=int, default=base.MAX_CONCURRENCY)
         parser.add_argument('--keep-objects', action="store_true")
         parser.add_argument('--bucket-id', default=None)
+        parser.add_argument('--parallel-objects', type=int, default=1)
 
     def setup(self):
         if self.params.get('multipart_chunksize'):
@@ -46,11 +47,12 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
 
     def run(self, **kwargs):
         self.sleep(self.params['warmup_sleep'])
-        pool = concurrent.futures.ProcessPoolExecutor(
+        pool = ProcessPoolExecutor(
             max_workers=self.params['process_number'],
         )
 
         def download_object(url):
+            self.logger.debug("Started downlaod '%s'", url)
             futures = []
             for i in range(self.chunk_number):
                 b_range = (i*self.multipart_chunksize, min(i*self.multipart_chunksize+self.multipart_chunksize, self.params['object_size']-1))
@@ -67,12 +69,20 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
                         break
                     future.result()
 
-        def run():
-            for url in self.urls:
-                elapsed = self.timeit(download_object, url)[0]
-                self.timings.append(elapsed)
+        def download_objects():
+            futures = []
+            self.logger.debug("Started downlaods")
+            with ThreadPoolExecutor(max_workers=self.params['parallel_objects']) as executor:
+                for url in self.urls:
+                    futures.append(executor.submit(
+                        self.timeit,
+                        download_object,
+                        url
+                    ))
+            for future in futures:
+                self.timings.append(future.result()[0])
 
-        self.total_time = utils.timeit(run)[0]
+        self.total_time = utils.timeit(download_objects)[0]
         pool.shutdown()
 
     def make_stats(self):
@@ -102,6 +112,7 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
             'presigned': int(self.params['presigned']),
             'warmup_sleep': self.params['warmup_sleep'],
             'error_timeout': 0,
+            'bw_total': total_size / self.total_time,
         }
         stats.update(self._make_aggr(self.timings, 'time'))
         bws = [(size/t) for t in self.timings]
