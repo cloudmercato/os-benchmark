@@ -145,6 +145,8 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             msg = err.response['Error'].get('Message', code)
             if code == 'NotImplemented':
                 raise errors.DriverFeatureUnsupported(msg)
+            if code == 'BucketAlreadyExists':
+                raise errors.DriverBucketAlreadyExistError(msg)
             raise
         return {'id': bucket.name}
 
