@@ -1,14 +1,15 @@
 """
 Command-line management module.
 """
-import os
 import sys
 import argparse
 import json
 from collections import defaultdict
+
 import os_benchmark
 from os_benchmark import logger as logger_
 from os_benchmark import utils, benchmarks, errors
+from os_benchmark.benchmarks import base
 from os_benchmark.drivers import errors as driver_errors
 
 ACTIONS = (
@@ -39,9 +40,7 @@ ACTIONS = (
     'tcptraceroute',
     'test-features',
 )
-MULTIPART_THREHOLD = 64 * 2**20
-MULTIPART_CHUNKSIZE = 8 * 2**20
-MAX_CONCURRENCY = os.cpu_count() * 2
+
 
 def create_parser():
     """Create main parser"""
@@ -84,6 +83,18 @@ def create_parser():
         '-i', '--noinput',
         default=False, action='store_true',
         help="Disable any prompt",
+    )
+    parser.add_argument(
+        '--enable-monitoring', action="store_true", dest="monitoring_enabled",
+    )
+    parser.add_argument(
+        '--monitoring-interval', type=int, default=5,
+    )
+    parser.add_argument(
+        '--monitoring-probers', action='append'
+    )
+    parser.add_argument(
+        '--monitoring-output', default="/dev/stderr"
     )
     return parser
 
@@ -176,9 +187,9 @@ class Controller:
         content_group.add_argument('--content', type=argparse.FileType('rb'), required=False)
         content_group.add_argument('--content-size', type=int, required=False)
         content_group.add_argument('--', '--from-stdin', default=False, action='store_true', dest='from_stdin')
-        self.subparser.add_argument('--multipart-threshold', type=int, default=MULTIPART_THREHOLD)
-        self.subparser.add_argument('--multipart-chunksize', type=int, default=MULTIPART_CHUNKSIZE)
-        self.subparser.add_argument('--max-concurrency', type=int, default=MAX_CONCURRENCY)
+        self.subparser.add_argument('--multipart-threshold', type=int, default=base.MULTIPART_THREHOLD)
+        self.subparser.add_argument('--multipart-chunksize', type=int, default=base.MULTIPART_CHUNKSIZE)
+        self.subparser.add_argument('--max-concurrency', type=int, default=base.MAX_CONCURRENCY)
         parsed_args = self.parser.parse_known_args()[0]
 
         name = parsed_args.name or utils.get_random_name()
@@ -214,7 +225,6 @@ class Controller:
         self.logger.debug('URL: %s', url)
         fd = self.driver.download(url)
         print(fd.read())
-
 
     def list_objects(self):
         self.subparser.add_argument('bucket_id')
@@ -320,10 +330,12 @@ class Controller:
         self.driver.clean()
 
     def time_upload(self):
-        benchmarks.UploadBenchmark.make_parser_args(self.subparser)
+        benchmark_class = base.get_benchmark('upload')
+        benchmark_class.make_parser_args(self.subparser)
+
         parsed_args = self.parser.parse_known_args()[0]
 
-        benchmark = benchmarks.UploadBenchmark(self.driver)
+        benchmark = benchmark_class(self.driver)
         benchmark.set_params(**vars(parsed_args))
         benchmark.setup()
         benchmark.run()
@@ -332,10 +344,12 @@ class Controller:
         self.print_stats(stats)
 
     def time_download(self):
-        benchmarks.DownloadBenchmark.make_parser_args(self.subparser)
+        benchmark_class = base.get_benchmark('download')
+        benchmark_class.make_parser_args(self.subparser)
+
         parsed_args = self.parser.parse_known_args()[0]
 
-        benchmark = benchmarks.DownloadBenchmark(self.driver)
+        benchmark = benchmark_class(self.driver)
         benchmark.set_params(**vars(parsed_args))
         benchmark.setup()
         benchmark.run()
@@ -344,28 +358,13 @@ class Controller:
         self.print_stats(stats)
 
     def time_multi_download(self):
-        benchmarks.MultiDownloadBenchmark.make_parser_args(self.subparser)
+        benchmark_class = base.get_benchmark('multi_download')
+        benchmark_class.make_parser_args(self.subparser)
+
         parsed_args = self.parser.parse_known_args()[0]
 
-        benchmark = benchmarks.MultiDownloadBenchmark(self.driver)
-        benchmark.set_params(
-            storage_class=parsed_args.storage_class,
-            bucket_prefix=parsed_args.bucket_prefix,
-            bucket_suffix=parsed_args.bucket_suffix,
-            object_size=parsed_args.object_size,
-            object_number=parsed_args.object_number,
-            object_prefix=parsed_args.object_prefix,
-            presigned=parsed_args.presigned,
-            warmup_sleep=parsed_args.warmup_sleep,
-            multipart_chunksize=parsed_args.multipart_chunksize,
-            process_number=parsed_args.process_number,
-            max_concurrency=parsed_args.max_concurrency,
-            upload_multipart_threshold=parsed_args.upload_multipart_threshold,
-            upload_multipart_chunksize=parsed_args.upload_multipart_chunksize,
-            upload_max_concurrency=parsed_args.upload_max_concurrency,
-            keep_objects=parsed_args.keep_objects,
-            bucket_id=parsed_args.bucket_id,
-        )
+        benchmark = benchmark_class(self.driver)
+        benchmark.set_params(**vars(parsed_args))
         benchmark.setup()
         benchmark.run()
         benchmark.tear_down()
@@ -373,25 +372,13 @@ class Controller:
         self.print_stats(stats)
 
     def time_copy(self):
-        benchmarks.CopyBenchmark.make_parser_args(self.subparser)
+        benchmark_class = base.get_benchmark('copy')
+        benchmark_class.make_parser_args(self.subparser)
+
         parsed_args = self.parser.parse_known_args()[0]
 
-        benchmark = benchmarks.CopyBenchmark(self.driver)
-        benchmark.set_params(
-            storage_class=parsed_args.storage_class,
-            bucket_prefix=parsed_args.bucket_prefix,
-            bucket_suffix=parsed_args.bucket_suffix,
-            object_size=parsed_args.object_size,
-            object_number=parsed_args.object_number,
-            object_prefix=parsed_args.object_prefix,
-            multipart_threshold=parsed_args.multipart_threshold,
-            multipart_chunksize=parsed_args.multipart_chunksize,
-            max_concurrency=parsed_args.max_concurrency,
-            presigned=parsed_args.presigned,
-            warmup_sleep=parsed_args.warmup_sleep,
-            keep_objects=parsed_args.keep_objects,
-            bucket_id=parsed_args.bucket_id,
-        )
+        benchmark = benchmark_class(self.driver)
+        benchmark.set_params(**vars(parsed_args))
         benchmark.setup()
         benchmark.run()
         benchmark.tear_down()
@@ -399,27 +386,14 @@ class Controller:
         self.print_stats(stats)
 
     def ab(self):
-        benchmarks.AbBenchmark.make_parser_args(self.subparser)
+        benchmark_class = base.get_benchmark('ab')
+        benchmark_class.make_parser_args(self.subparser)
+
         parsed_args = self.parser.parse_known_args()[0]
 
-        benchmark = benchmarks.AbBenchmark(self.driver)
-        benchmark.set_params(
-            storage_class=parsed_args.storage_class,
-            bucket_prefix=parsed_args.bucket_prefix,
-            bucket_suffix=parsed_args.bucket_suffix,
-            object_size=parsed_args.object_size,
-            object_number=parsed_args.object_number,
-            object_prefix=parsed_args.object_prefix,
-            presigned=parsed_args.presigned,
-            warmup_sleep=parsed_args.warmup_sleep,
-            concurrency=parsed_args.concurrency,
-            timelimit=parsed_args.timelimit,
-            num_requests=parsed_args.num_requests,
-            keep_alive=parsed_args.keep_alive,
-            source_address=parsed_args.source_address,
-            keep_objects=parsed_args.keep_objects,
-            bucket_id=parsed_args.bucket_id,
-        )
+        benchmark = benchmark_class(self.driver)
+        benchmark.set_params(**vars(parsed_args))
+
         benchmark.setup()
         benchmark.run()
         benchmark.tear_down()
@@ -427,26 +401,14 @@ class Controller:
         self.print_stats(stats)
 
     def curl(self):
-        benchmarks.PycurlbBenchmark.make_parser_args(self.subparser)
+        benchmark_class = base.get_benchmark('curl')
+        benchmark_class.make_parser_args(self.subparser)
+
         parsed_args = self.parser.parse_known_args()[0]
 
-        benchmark = benchmarks.PycurlbBenchmark(self.driver)
-        benchmark.set_params(
-            storage_class=parsed_args.storage_class,
-            bucket_prefix=parsed_args.bucket_prefix,
-            bucket_suffix=parsed_args.bucket_suffix,
-            object_size=parsed_args.object_size,
-            object_number=parsed_args.object_number,
-            object_prefix=parsed_args.object_prefix,
-            multipart_threshold=parsed_args.multipart_threshold,
-            multipart_chunksize=parsed_args.multipart_chunksize,
-            max_concurrency=parsed_args.max_concurrency,
-            presigned=parsed_args.presigned,
-            warmup_sleep=parsed_args.warmup_sleep,
-            keep_alive=parsed_args.keep_alive,
-            keep_objects=parsed_args.keep_objects,
-            bucket_id=parsed_args.bucket_id,
-        )
+        benchmark = benchmark_class(self.driver)
+        benchmark.set_params(**vars(parsed_args))
+
         benchmark.setup()
         benchmark.run()
         benchmark.tear_down()
@@ -454,29 +416,14 @@ class Controller:
         self.print_stats(stats)
 
     def video_streaming(self):
-        benchmarks.VideoStreamingBenchmark.make_parser_args(self.subparser)
+        benchmark_class = base.get_benchmark('video_streaming')
+        benchmark_class.make_parser_args(self.subparser)
+
         parsed_args = self.parser.parse_known_args()[0]
 
-        benchmark = benchmarks.VideoStreamingBenchmark(self.driver)
-        benchmark.set_params(
-            storage_class=parsed_args.storage_class,
-            bucket_prefix=parsed_args.bucket_prefix,
-            bucket_suffix=parsed_args.bucket_suffix,
-            object_size=parsed_args.object_size,
-            object_number=parsed_args.object_number,
-            object_prefix=parsed_args.object_prefix,
-            multipart_threshold=parsed_args.multipart_threshold,
-            multipart_chunksize=parsed_args.multipart_chunksize,
-            max_concurrency=parsed_args.max_concurrency,
-            presigned=parsed_args.presigned,
-            warmup_sleep=parsed_args.warmup_sleep,
-            sleep_time=parsed_args.sleep_time,
-            client_number=parsed_args.client_number,
-            process_number=parsed_args.process_number,
-            delay_time=parsed_args.delay_time,
-            keep_objects=parsed_args.keep_objects,
-            bucket_id=parsed_args.bucket_id,
-        )
+        benchmark = benchmark_class(self.driver)
+        benchmark.set_params(**vars(parsed_args))
+
         benchmark.setup()
         benchmark.run()
         benchmark.tear_down()
@@ -484,10 +431,12 @@ class Controller:
         self.print_stats(stats)
 
     def ping(self):
-        benchmarks.PingBenchmark.make_parser_args(self.subparser)
+        benchmark_class = base.get_benchmark('ping')
+        benchmark_class.make_parser_args(self.subparser)
+
         parsed_args = self.parser.parse_known_args()[0]
 
-        benchmark = benchmarks.PingBenchmark(self.driver)
+        benchmark = benchmark_class(self.driver)
         benchmark.set_params(
             storage_class=parsed_args.storage_class,
             bucket_prefix='',
@@ -510,10 +459,12 @@ class Controller:
         self.print_stats(stats)
 
     def tcpping(self):
-        benchmarks.TcpPingBenchmark.make_parser_args(self.subparser)
+        benchmark_class = base.get_benchmark('tcpping')
+        benchmark_class.make_parser_args(self.subparser)
+
         parsed_args = self.parser.parse_known_args()[0]
 
-        benchmark = benchmarks.TcpPingBenchmark(self.driver)
+        benchmark = benchmark_class(self.driver)
         benchmark.set_params(
             storage_class=parsed_args.storage_class,
             bucket_prefix='',
@@ -536,10 +487,12 @@ class Controller:
         self.print_stats(stats)
 
     def traceroute(self):
-        benchmarks.TracerouteBenchmark.make_parser_args(self.subparser)
+        benchmark_class = base.get_benchmark('traceroute')
+        benchmark_class.make_parser_args(self.subparser)
+
         parsed_args = self.parser.parse_known_args()[0]
 
-        benchmark = benchmarks.TracerouteBenchmark(self.driver)
+        benchmark = benchmark_class(self.driver)
         benchmark.set_params(
             storage_class=parsed_args.storage_class,
             bucket_prefix='',
@@ -562,10 +515,12 @@ class Controller:
         self.print_stats(stats)
 
     def tcptraceroute(self):
-        benchmarks.TcpTracerouteBenchmark.make_parser_args(self.subparser)
+        benchmark_class = base.get_benchmark('tcptraceroute')
+        benchmark_class.make_parser_args(self.subparser)
+
         parsed_args = self.parser.parse_known_args()[0]
 
-        benchmark = benchmarks.TcpTracerouteBenchmark(self.driver)
+        benchmark = benchmark_class(self.driver)
         benchmark.set_params(
             storage_class=parsed_args.storage_class,
             bucket_prefix='',
@@ -591,7 +546,12 @@ class Controller:
         self.subparser.add_argument('--storage-class', required=False)
         parsed_args = self.parser.parse_known_args()[0]
 
-        benchmark = benchmarks.TestFeatureBenchmark(self.driver)
+        benchmark_class = base.get_benchmark('features')
+        benchmark_class.make_parser_args(self.subparser)
+
+        parsed_args = self.parser.parse_known_args()[0]
+
+        benchmark = benchmark_class(self.driver)
         benchmark.set_params(
             storage_class=parsed_args.storage_class,
         )

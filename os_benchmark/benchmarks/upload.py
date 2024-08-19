@@ -4,7 +4,7 @@ from os_benchmark.drivers import errors as driver_errors
 from . import base
 
 
-class UploadBenchmark(base.BaseBenchmark):
+class Benchmark(base.BaseBenchmark):
     """Time objects uploading"""
     @staticmethod
     def make_parser_args(parser):

@@ -11,7 +11,7 @@ from .enable_bucket_logging import EnableBucketLogggingTest
 from .put_bucket_tag import PutBucketTagTest
 
 
-class TestFeatureBenchmark(base.BaseBenchmark):
+class Benchmark(base.BaseBenchmark):
     """Test and report feature availability"""
     TESTS = {
         'delete_objects': DeleteObjectsTest,

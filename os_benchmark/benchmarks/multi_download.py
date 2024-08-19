@@ -12,7 +12,7 @@ def _download(session, url, b_range):
         raise errors.ConnectionError(err)
 
 
-class MultiDownloadBenchmark(base.BaseSetupObjectsBenchmark):
+class Benchmark(base.BaseSetupObjectsBenchmark):
     """Time objects downloading using multi-range"""
     @staticmethod
     def make_parser_args(parser):

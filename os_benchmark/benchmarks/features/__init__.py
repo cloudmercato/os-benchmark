@@ -1,1 +1,1 @@
-from .main import TestFeatureBenchmark
+from .main import Benchmark

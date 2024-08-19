@@ -5,7 +5,7 @@ except ImportError:
 from . import base
 
 
-class TcpTracerouteBenchmark(base.BaseNetworkBenchmark):
+class Benchmark(base.BaseNetworkBenchmark):
     """TcpTraceroute endpoint"""
     @staticmethod
     def make_parser_args(parser):

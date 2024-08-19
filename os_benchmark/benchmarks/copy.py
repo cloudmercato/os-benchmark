@@ -2,7 +2,7 @@ from os_benchmark import utils
 from . import base
 
 
-class CopyBenchmark(base.BaseSetupObjectsBenchmark):
+class Benchmark(base.BaseSetupObjectsBenchmark):
     """Time objects copy"""
     @staticmethod
     def make_parser_args(parser):

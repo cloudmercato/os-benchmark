@@ -4,7 +4,7 @@ from os_benchmark import errors
 from . import base
 
 
-class DownloadBenchmark(base.BaseSetupObjectsBenchmark):
+class Benchmark(base.BaseSetupObjectsBenchmark):
     """Time objects downloading"""
     @staticmethod
     def make_parser_args(parser):

@@ -5,7 +5,7 @@ except ImportError:
 from . import base
 
 
-class TcpPingBenchmark(base.BaseNetworkBenchmark):
+class Benchmark(base.BaseNetworkBenchmark):
     """Time ping endpoint"""
     @staticmethod
     def make_parser_args(parser):

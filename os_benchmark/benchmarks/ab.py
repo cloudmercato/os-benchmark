@@ -5,7 +5,7 @@ from os_benchmark import errors
 from . import base
 
 
-class AbBenchmark(base.BaseSetupObjectsBenchmark):
+class Benchmark(base.BaseSetupObjectsBenchmark):
     """Measure objects downloading with Apache Benchmark"""
     result_fields = {
         'SSL/TLS Protocol': 'tls_protocol',

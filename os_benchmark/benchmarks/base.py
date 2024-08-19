@@ -1,3 +1,4 @@
+import importlib
 import os
 import logging
 import time
@@ -12,6 +13,11 @@ try:
     import aiohttp
 except ImportError:
     aiohttp = None
+try:
+    from probes import ProbeManager
+    has_probes = True
+except ImportError:
+    has_probes = False
 
 from os_benchmark import utils
 from os_benchmark.drivers import errors as driver_errors
@@ -95,6 +101,25 @@ class BaseBenchmark:
 
     def timeit(self, *args, **kwargs):
         return utils.timeit(*args, **kwargs)
+
+    def start_monitoring(self, probers, interval=5):
+        if not probers:
+            probers = [
+                'probes.probers.system.CpuProber',
+                'probes.probers.system.MemoryProber',
+                'probes.probers.system.NetworkProber',
+            ]
+        self.probe_manager = ProbeManager(
+            interval=interval,
+            probers=probers,
+        )
+        self.probe_manager.start()
+
+    def stop_monitoring(self):
+        self.probe_manager.stop()
+
+    def get_monitoring_results(self):
+        return self.probe_manager.get_results()
 
 
 class BaseSetupObjectsBenchmark(BaseBenchmark):
@@ -217,3 +242,12 @@ class BaseNetworkBenchmark(BaseSetupObjectsBenchmark):
         self.ip = self.addr_info[0][-1][0]
 
         self.replies = []
+
+
+def get_benchmark(key):
+    """Get driver from its key"""
+    module_path = 'os_benchmark.benchmarks.%s' % key
+    class_name = 'Benchmark'
+    module = importlib.import_module(module_path)
+    driver_class = getattr(module, class_name)
+    return driver_class

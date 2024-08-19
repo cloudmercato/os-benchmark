@@ -110,7 +110,7 @@ def _run_process(
     return timings, errors
 
 
-class VideoStreamingBenchmark(base.BaseSetupObjectsBenchmark):
+class Benchmark(base.BaseSetupObjectsBenchmark):
     """
     Download sequentially with sleep-time between objects.
     """

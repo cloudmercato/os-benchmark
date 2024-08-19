@@ -6,7 +6,7 @@ from os_benchmark import errors
 from . import base
 
 
-class PycurlbBenchmark(base.BaseSetupObjectsBenchmark):
+class Benchmark(base.BaseSetupObjectsBenchmark):
     """Time request with pycurlb"""
     timing_fields = (
         'namelookup_time',
