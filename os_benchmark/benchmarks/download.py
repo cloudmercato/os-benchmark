@@ -56,6 +56,7 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
             'time': self.total_time,
             'bw': bw,
             'rate': rate,
+            'parallel_objects': self.params['parallel_objects'],
             'bucket_prefix': self.params.get('bucket_prefix'),
             'object_size': size,
             'object_number': self.params['object_number'],

@@ -99,6 +99,7 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
             'object_size': size,
             'object_number': self.params['object_number'],
             'object_prefix': self.params.get('object_prefix'),
+            'parallel_objects': self.params['parallel_objects'],
             'multipart_chunksize': self.multipart_chunksize,
             'process_number': self.params['process_number'],
             'chunk_number': self.chunk_number,
