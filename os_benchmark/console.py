@@ -10,6 +10,7 @@ import os_benchmark
 from os_benchmark import logger as logger_
 from os_benchmark import utils, benchmarks, errors
 from os_benchmark.benchmarks import base
+from os_benchmark import prepare
 from os_benchmark.drivers import errors as driver_errors
 
 ACTIONS = (
@@ -26,6 +27,8 @@ ACTIONS = (
     'copy-object',
     'clean-bucket',
     'clean',
+
+    'prepare',
 
     'time-upload',
     'time-download',
@@ -560,6 +563,11 @@ class Controller:
         benchmark.tear_down()
         stats = benchmark.make_stats()
         self.print_stats(stats)
+
+    def prepare(self):
+        prepare.make_parser_args(self.subparser)
+        parsed_args = self.parser.parse_known_args()[0]
+        prepare.run(parsed_args, self.driver)
 
     def print_stats(self, stats):
         template = '%s\t\t%s'
