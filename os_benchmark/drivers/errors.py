@@ -52,3 +52,7 @@ class DriverFeatureUnsupported(DriverError):
 
 class DriverRateLimitError(DriverError):
     """The storage service indicates the user has sent too many requests"""
+
+
+class DriverObjectAclError(DriverError):
+    """The storage service indicates that there's a problem with object ACLs."""

@@ -77,6 +77,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         headers = {}
 
         acl = acl or self.default_acl
+        acl = None
         if acl is not None:
             headers["x-amz-acl"] = acl
         if bucket_lock:
@@ -131,14 +132,21 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         }
         if max_concurrency is not None:
             params['num_parallel_uploads'] = max_concurrency
-        if multipart_chunksize is not None:
+        if multipart_chunksize is not None and multipart_chunksize < content.size:
             params['part_size'] = multipart_chunksize
         if acl is not None:
             params['metadata']['x-amz-acl'] = acl
         if storage_class:
             params['metadata']['x-amz-storage-class'] = storage_class
         self.logger.debug("Put object params: %s", params)
-        obj = self.client.put_object(**params)
+
+        try:
+            obj = self.client.put_object(**params)
+        except minio_error.S3Error as err:
+            if err.code == 'AccessControlListNotSupported':
+                raise errors.DriverObjectAclError(err.message)
+            raise
+
         return {'name': name}
 
     def delete_object(self, bucket_id, name, skip_lock=None, version_id=None, **kwargs):

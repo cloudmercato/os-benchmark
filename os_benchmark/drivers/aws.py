@@ -17,12 +17,14 @@ Configuration
 
 .. _boto3: https://github.com/boto/boto3
 """
-from os_benchmark.drivers import s3
+from os_benchmark.drivers import minio_sdk
 
 
-class Driver(s3.Driver):
+class Driver(minio_sdk.Driver):
     """AWS S3 Driver"""
     id = 'aws'
+    default_acl = None
+    default_object_acl = None
 
     def get_url(self, bucket_id, name, **kwargs):
         url = '%s/%s/%s' % (self.kwargs['endpoint_url'], bucket_id, name)

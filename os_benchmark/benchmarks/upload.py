@@ -75,9 +75,17 @@ class Benchmark(base.BaseBenchmark):
         def upload_files():
             with ThreadPoolExecutor(max_workers=self.params['parallel_objects']) as executor:
                 for i in range(self.params['object_number']):
-                    executor.submit(upload_file)
+                    future = executor.submit(upload_file)
+                    futures.append(future)
 
+        futures = []
         self.total_time = self.timeit(upload_files)[0]
+        for future in futures:
+            try:
+                future.result()
+            except driver_errors.DriverError as err:
+                self.logger.error(err)
+                self.errors.append(err)
 
     def tear_down(self):
         if not self.params.get('keep_objects'):
