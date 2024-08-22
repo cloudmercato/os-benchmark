@@ -35,9 +35,14 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
                 self.errors.append(err)
 
         def download_objets(urls):
+            futures = []
             with ThreadPoolExecutor(max_workers=self.params['parallel_objects']) as executor:
                 for url in urls:
-                    executor.submit(download_objet, url=url)
+                    future = executor.submit(download_objet, url=url)
+                    futures.append(future)
+
+            for futures in futures:
+                future.result()
 
         self.sleep(self.params['warmup_sleep'])
         self.total_time = self.timeit(download_objets, urls=self.urls)[0]

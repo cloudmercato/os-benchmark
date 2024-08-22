@@ -416,8 +416,9 @@ class RequestsMixin:
         try:
             with self.session.get(url, stream=True, headers=headers) as response:
                 if response.status_code != 200:
+                    self.logger.warning('GET %s: %s', url, response.status_code)
                     msg = '%s %s' % (url, response.content)
-                    raise errors.base.InvalidHttpCode(msg, response.status_code)
+                    raise errors.InvalidHttpCode(msg, response.status_code)
                 for chunk in response.iter_content(chunk_size=block_size):
                     pass
         except requests.exceptions.ConnectionError as err:

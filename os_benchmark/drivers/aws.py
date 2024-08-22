@@ -1,6 +1,6 @@
 """
 .. note::
-  This driver requires `boto3`_.
+  This driver requires `minio`_.
 
 Configuration
 ~~~~~~~~~~~~~
@@ -10,22 +10,30 @@ Configuration
   ---
   aws:
     driver: aws
-    aws_access_key_id: <your_ak>
-    aws_secret_access_key: <your_sk>
-    endpoint_url: https://s3.<region_id>.amazonaws.com
-    region_name: <region_id>
+    access_key: <your_ak>
+    secret_key: <your_sk>
+    endpoint: s3.<region_id>.amazonaws.com
+    region: <region_id>
 
 .. _boto3: https://github.com/boto/boto3
 """
+from minio.xml import Element, SubElement, getbytes
 from os_benchmark.drivers import minio_sdk
 
 
 class Driver(minio_sdk.Driver):
     """AWS S3 Driver"""
     id = 'aws'
-    default_acl = None
     default_object_acl = None
 
     def get_url(self, bucket_id, name, **kwargs):
-        url = '%s/%s/%s' % (self.kwargs['endpoint_url'], bucket_id, name)
+        url = 'https://%s/%s/%s' % (self.kwargs['endpoint'], bucket_id, name)
         return url
+
+    def _make_create_bucket_params(self, params):
+        if self.kwargs['region'] == 'us-east-1':
+            params['body'] = None
+        elif self.kwargs.get('region'):
+            element = Element("CreateBucketConfiguration")
+            SubElement(element, "LocationConstraint", self.kwargs['region'])
+            params['body'] = getbytes(element)

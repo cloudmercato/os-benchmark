@@ -72,6 +72,9 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         buckets = [{'id': b.name} for b in buckets]
         return buckets
 
+    def _make_create_bucket_params(self, params):
+        pass
+
     def create_bucket(self, name, acl=None, bucket_lock=None, **kwargs):
         location = self.kwargs['region']
         headers = {}
@@ -83,16 +86,12 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         if bucket_lock:
             headers["x-amz-bucket-object-lock-enabled"] = "true"
 
-        body = None
-        if self.kwargs.get('extra') and self.kwargs['extra'].get('location_constraint'):
-            element = Element("CreateBucketConfiguration")
-            SubElement(element, "LocationConstraint", location)
-            body = getbytes(element)
         params = {
             'bucket_name': name,
-            'body': body,
+            'body': None,
             'headers': headers,
         }
+        self._make_create_bucket_params(params)
         self.logger.debug("Create bucket params: %s", params)
         try:
             self.client._url_open("PUT", location, **params)
@@ -167,16 +166,23 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         )
         return url
 
-    def put_bucket_policy(self, bucket_id, **kwargs):
+    def put_bucket_policy(self, bucket_id, object_id='*', **kwargs):
         policy = json.dumps({
+            "Version": "2012-10-17",
             "Statement": [{
-                "Action": ["s3:GetObject"],
                 "Effect": "Allow",
-                "Principal": {"AWS": ["*"]},
-                "Resource": [f"arn:aws:s3:::{bucket_id}/*"],
-                "Sid":"UCDefaultPublicPolicy"
+                "Action": [
+                    "s3:GetObject",
+                    "s3:ListBucket",
+                ],
+                "Principal": {"AWS": "*"},
+                "Resource": [f"arn:aws:s3:::{bucket_id}"],
+            }, {
+                "Effect": "Allow",
+                "Principal": {"AWS": "*"},
+                "Action": ["s3:GetObject"],
+                "Resource": [f"arn:aws:s3:::{bucket_id}/{object_id}"],
             }],
-            "Version": "2012-10-17"
         })
         self.client.set_bucket_policy(bucket_id, policy)
 

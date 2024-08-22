@@ -1,5 +1,6 @@
 """Driver errors module."""
 from os_benchmark import errors as base
+from os_benchmark.errors import InvalidHttpCode
 
 
 class DriverError(base.OsbError):

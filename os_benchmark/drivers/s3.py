@@ -14,7 +14,7 @@ Configuration
     driver: s3
     aws_access_key_id: <your_ak>
     aws_secret_access_key: <your_sk>
-    region: eu-west-1
+    region_name: eu-west-1
 
 All parameters except ``driver`` will be passed to ``boto3.resource``.
 """
@@ -70,8 +70,10 @@ def handle_request(method):
 
 class Driver(base.RequestsMixin, base.BaseDriver):
     id = 's3'
-    default_acl = 'public-read'
-    default_object_acl = 'public-read'
+    default_acl = None
+    default_object_acl = None
+    old_acl = True
+
     default_kwargs = {}
     default_config = {}
     _default_config = {
@@ -120,8 +122,10 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     def _get_create_request_params(self, name, acl, **kwargs):
         params = {
             'Bucket': name,
-            'ACL': acl,
         }
+        if self.old_acl:
+            params['ACL'] = acl
+
         if 'region_name' in self.kwargs:
             params['CreateBucketConfiguration'] = {
                 'LocationConstraint': self.kwargs['region_name']
@@ -148,6 +152,32 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             if code == 'BucketAlreadyExists':
                 raise errors.DriverBucketAlreadyExistError(msg)
             raise
+
+        if not self.old_acl:
+            self.logger.debug("Allow public access block")
+            self.s3.meta.client.put_public_access_block(
+                Bucket=name,
+                PublicAccessBlockConfiguration={
+                    'BlockPublicAcls': False,
+                    'IgnorePublicAcls': False,
+                    'BlockPublicPolicy': False,
+                    'RestrictPublicBuckets': False,
+                }
+            )
+            policy = json.dumps({
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": {"AWS": "*"},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{name}/*"],
+                }],
+            })
+            self.s3.meta.client.put_bucket_policy(
+                Bucket=name,
+                Policy=policy,
+            )
+
         return {'id': bucket.name}
 
     @handle_request
@@ -284,8 +314,10 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                multipart_threshold=None, multipart_chunksize=None,
                max_concurrency=None, storage_class=None,
                **kwargs):
-        acl = acl or self.default_object_acl
-        extra = {'ACL': acl}
+        extra = {}
+        if self.old_acl:
+            acl = acl or self.default_object_acl
+            extra['ACL'] = acl
         if storage_class:
             extra['StorageClass'] = storage_class
         multipart_threshold = multipart_threshold or base.MULTIPART_THRESHOLD
@@ -297,14 +329,16 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             max_concurrency=max_concurrency,
             multipart_chunksize=multipart_chunksize,
         )
+        params = {
+            'Fileobj': content,
+            'Bucket': bucket_id,
+            'Key': name,
+            'ExtraArgs': extra,
+            'Config': transfer_config,
+        }
+        self.logger.debug("Upload obj params: %s", params)
         try:
-            self.s3.meta.client.upload_fileobj(
-                Fileobj=content,
-                Bucket=bucket_id,
-                Key=name,
-                ExtraArgs=extra,
-                Config=transfer_config,
-            )
+            self.s3.meta.client.upload_fileobj(**params)
         except botocore.exceptions.ClientError as err:
             code = err.response['Error']['Code']
             msg = err.response['Error']['Message']
@@ -313,6 +347,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             elif code == 'AccessDenied':
                 raise errors.DriverBucketUnfoundError(msg)
             raise
+
         return {'name': name}
 
     @handle_request
