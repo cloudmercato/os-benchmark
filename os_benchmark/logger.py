@@ -1,6 +1,8 @@
 import logging
 
-formatter = logging.Formatter('[%(asctime)s %(levelname)s]: %(message)s')
+# TODO: Make it selectable
+# formatter = logging.Formatter('[%(asctime)s %(levelname)s]: %(message)s')
+formatter = logging.Formatter('[%(asctime)s %(pathname)s:%(lineno)d %(levelname)s]: %(message)s')
 
 handler = logging.StreamHandler()
 handler.setFormatter(formatter)

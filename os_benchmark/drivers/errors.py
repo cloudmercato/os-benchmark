@@ -11,6 +11,14 @@ class DriverConnectionError(DriverError):
     """Driver connection error"""
 
 
+class DriverConnectionTimeoutError(DriverConnectionError):
+    """Driver connection time out error"""
+
+
+class DriverReadTimeoutError(DriverConnectionError):
+    """Driver read time out error"""
+
+
 class DriverAuthenticationError(DriverError):
     """Driver authentication error"""
 
@@ -57,3 +65,11 @@ class DriverRateLimitError(DriverError):
 
 class DriverObjectAclError(DriverError):
     """The storage service indicates that there's a problem with object ACLs."""
+
+
+class DriverClientError(DriverError):
+    """The local client is unable to run."""
+
+
+class DriverClientCapacityError(DriverClientError):
+    """The local client do not have enough capacity to run."""

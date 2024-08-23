@@ -20,7 +20,7 @@ Configuration
 .. _`Google Cloud`: https://cloud.google.com/
 """
 import json
-import concurrent.futures
+import requests
 from google.cloud import storage
 from google.cloud.client import service_account
 from google.api_core import exceptions
@@ -56,7 +56,6 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             self._client = storage.Client(
                 credentials=self.credentials,
                 project=self.json['project_id'],
-                # _http=self.session,
             )
         return self._client
 
@@ -98,19 +97,35 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         blob = storage.Blob(name=name, bucket=bucket)
         try:
             blob._do_multipart_upload(**params)
+        except requests.exceptions.ConnectionError as err:
+            if isinstance(err.args[0][1], OSError):
+                os_err = err.args[0][1]
+                self.logger.warning("OS Error in upload: %s", err)
+                if os_err.errno == 55:
+                    raise errors.DriverClientCapacityError(os_err)
+            self.logger.warning("Connection error in upload: %s", err)
+            raise errors.DriverConnectionError(err)
+        except requests.exceptions.ConnectTimeout as err:
+            self.logger.warning("Connection time out for in upload: %s", err)
+            raise errors.DriverConnectionError(err)
+        except requests.exceptions.ReadTimeout as err:
+            self.logger.warning("Connection read time out in upload: %s", err)
+            raise errors.DriverReadTimeoutError(err)
         except InvalidResponse as err:
             raise
 
-    def _multipart_upload(self, bucket_id, name, multipart_chunksize, max_concurrency=None,
-                          **params):
+    def _multipart_upload(
+        self,
+        bucket_id,
+        name,
+        multipart_chunksize,
+        max_concurrency=None,
+        **params,
+    ):
         multipart_chunksize = multipart_chunksize or base.MULTIPART_CHUNKSIZE
         max_concurrency = max_concurrency or base.MAX_CONCURRENCY
 
-        part_id = 1
-        offset = 0
-        parts = []
-
-        def _upload(part_id, offset):
+        def _upload(part_id, offset, content):
             self.logger.debug('Uploading %s part %s', name, part_id)
             part_name = '%s-%s' % (name, part_id)
             part = base.MultiPart(params['stream'], multipart_chunksize)
@@ -120,20 +135,15 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                 'size': part.size,
             })
             self._simple_upload(bucket_id, part_name, **part_params)
-            parts.append(part_name)
             self.logger.debug('Done %s part %s', name, part_id)
+            return part_name
 
-        pool_kwargs = {'max_workers': max_concurrency}
-        with concurrent.futures.ThreadPoolExecutor(**pool_kwargs) as executor:
-            futures = []
-            while offset < params['size']:
-                chunk_size = min(multipart_chunksize, params['size'] - offset)
-                result = executor.submit(_upload, part_id=part_id, offset=offset)
-                futures.append(result)
-                part_id += 1
-                offset += multipart_chunksize
-            for future in futures:
-                future.result()
+        uploader = base.MultiPartUploader(
+            content=params['stream'],
+            multipart_chunksize=multipart_chunksize,
+            max_concurrency=max_concurrency,
+        )
+        parts = uploader.run(_upload)
 
         def compose_objects(params, filename):
             url = 'https://storage.googleapis.com/storage/v1/b/%s/o/%s/compose' % (
@@ -141,7 +151,9 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             )
             response = self.client._http.post(url, json=params)
             self.logger.info("Composing %s: %s", filename, params)
-            if response.status_code != 200:
+            if response.status_code == 429:
+                raise errors.DriverRateLimitError(response.content)
+            elif response.status_code != 200:
                 raise Exception(response.content)
             self.logger.info("Composed %s" % filename)
 
@@ -167,10 +179,12 @@ class Driver(base.RequestsMixin, base.BaseDriver):
                     {'name': part} for part in to_compose
                 ]
                 compose_name = name
+                self.logger.debug('Gathering %s multiupload parts', len(to_compose))
                 compose_objects(compose_params, compose_name)
                 to_delete.extend(to_compose)
 
         bucket = storage.Bucket(self.client, bucket_id)
+        self.logger.debug('Deleting %s multiupload parts', len(parts))
         bucket.delete_blobs(to_delete)
 
     def upload(self, bucket_id, name, content, max_concurrency=None,

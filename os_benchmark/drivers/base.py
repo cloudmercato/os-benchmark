@@ -91,10 +91,10 @@ class MultiPartUploader:
                 offset += chunk_size
 
             self.logger.debug('Waiting all upload')
-            results = [
-                future.result()
-                for future in self.futures
-            ]
+        results = [
+            future.result()
+            for future in self.futures
+        ]
         return results
 
 
@@ -390,6 +390,8 @@ class HTTPAdapter(BaseHTTPAdapter):
 class RequestsMixin:
     """Mixin providing a HTTTP Session"""
     session_headers = {}
+
+    conn_err = requests.exceptions.ConnectionError
 
     @property
     def session(self):
