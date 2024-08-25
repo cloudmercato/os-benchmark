@@ -73,6 +73,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
     default_acl = None
     default_object_acl = None
     old_acl = True
+    manage_public_access_block = False
 
     default_kwargs = {}
     default_config = {}
@@ -154,16 +155,17 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             raise
 
         if not self.old_acl:
-            self.logger.debug("Allow public access block")
-            self.s3.meta.client.put_public_access_block(
-                Bucket=name,
-                PublicAccessBlockConfiguration={
-                    'BlockPublicAcls': False,
-                    'IgnorePublicAcls': False,
-                    'BlockPublicPolicy': False,
-                    'RestrictPublicBuckets': False,
-                }
-            )
+            if self.manage_public_access_block:
+                self.logger.debug("Allow public access block")
+                self.s3.meta.client.put_public_access_block(
+                    Bucket=name,
+                    PublicAccessBlockConfiguration={
+                        'BlockPublicAcls': False,
+                        'IgnorePublicAcls': False,
+                        'BlockPublicPolicy': False,
+                        'RestrictPublicBuckets': False,
+                    }
+                )
             policy = json.dumps({
                 "Version": "2012-10-17",
                 "Statement": [{

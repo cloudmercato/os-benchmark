@@ -26,7 +26,6 @@ from urllib.parse import urljoin
 from os_benchmark.drivers import s3
 
 
-
 class Driver(s3.Driver):
     """Wasabi S3 Driver"""
     id = 'wasabi'
@@ -34,6 +33,7 @@ class Driver(s3.Driver):
     default_kwargs = {
         'endpoint_url': endpoint_url,
     }
+    old_acl = False
 
     @property
     def endpoint_urls(self):
@@ -56,5 +56,6 @@ class Driver(s3.Driver):
         return kwargs
 
     def get_url(self, bucket_id, name, **kwargs):
-        url = urljoin(self.endpoint_url, '%s/%s' % (bucket_id, name))
+        endpoint_url = self.get_endpoint_url()
+        url = urljoin(endpoint_url, '%s/%s' % (bucket_id, name))
         return url
