@@ -19,8 +19,7 @@ from functools import wraps
 import hashlib
 from requests.packages.urllib3.util.retry import Retry
 from b2sdk import v2 as b2
-from b2sdk import api, exception
-from b2sdk.transfer.outbound.upload_source import AbstractUploadSource
+from b2sdk.v2 import api, exception, AbstractUploadSource
 from os_benchmark.drivers import base, errors
 
 ACLS = {
