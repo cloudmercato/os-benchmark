@@ -391,8 +391,6 @@ class RequestsMixin:
     """Mixin providing a HTTTP Session"""
     session_headers = {}
 
-    conn_err = requests.exceptions.ConnectionError
-
     @property
     def session(self):
         if not hasattr(self, '_session'):

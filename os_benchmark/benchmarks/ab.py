@@ -73,7 +73,6 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
                 data.update(parse_stat(key, line))
         return data
 
-
     def run_ab(self, url):
         cmd = 'ab -c %(concurrency)d -t %(timelimit)d -n %(num_requests)s' % self.params
         if self.params['keep_alive']:
@@ -87,12 +86,14 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
                 cmd.split(),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                text=True,
             )
             stdout, stderr = out.communicate()
         except FileNotFoundError as err:
             self.logger.warning("Error during ab launching: %s", err)
             raise base.BenchmarkError(str(err))
-        return self.parse_ab(stdout.decode())
+        self.logger.debug("ab stderr: %s", stderr)
+        return self.parse_ab(stdout)
 
     def run(self, **kwargs):
         def download_objets(urls):

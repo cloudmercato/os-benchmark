@@ -21,6 +21,7 @@ Configuration
 """
 import json
 import requests
+import urllib3
 from google.cloud import storage
 from google.cloud.client import service_account
 from google.api_core import exceptions
@@ -74,7 +75,8 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             bucket = self.client.create_bucket(**params)
         except exceptions.Conflict as err:
             raise errors.DriverBucketAlreadyExistError(err)
-        bucket.make_public(True)
+        if acl == 'public-read':
+            bucket.make_public(True)
         return {
             'id': bucket.name,
             'name': name,
@@ -98,11 +100,17 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         try:
             blob._do_multipart_upload(**params)
         except requests.exceptions.ConnectionError as err:
+            if isinstance(err.args[0], urllib3.exceptions.ProtocolError):
+                proto_err = err.args[0]
+                if proto_err.args[0] == 'Connection aborted.':
+                    raise errors.DriverConnectionTimeoutError(proto_err)
+
             if isinstance(err.args[0][1], OSError):
                 os_err = err.args[0][1]
                 self.logger.warning("OS Error in upload: %s", err)
                 if os_err.errno == 55:
                     raise errors.DriverClientCapacityError(os_err)
+
             self.logger.warning("Connection error in upload: %s", err)
             raise errors.DriverConnectionError(err)
         except requests.exceptions.ConnectTimeout as err:
