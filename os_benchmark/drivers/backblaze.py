@@ -226,8 +226,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             except exception.FileNotPresent as err:
                 self.logger.debug(err)
 
-    def get_url(self, bucket_id, name, bucket_name, **kwargs):
+    def get_url(self, bucket_id, name, **kwargs):
         bucket = self._get_bucket(bucket_id)
-        bucket.name = bucket_name
         url = bucket.get_download_url(name)
         return url
