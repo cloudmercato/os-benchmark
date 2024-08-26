@@ -56,6 +56,5 @@ class Driver(s3.Driver):
         return kwargs
 
     def get_url(self, bucket_id, name, **kwargs):
-        endpoint_url = self.get_endpoint_url()
-        url = urljoin(endpoint_url, '%s/%s' % (bucket_id, name))
+        url = f'https://{bucket_id}.s3.wasabisys.com/{name}'
         return url

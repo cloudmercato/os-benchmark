@@ -40,6 +40,7 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
         def curl():
             for url in self.urls:
                 try:
+                    self.logger.info('curl %s', url)
                     info = curler.perform(
                         url=url,
                         connect_timeout=int(self.driver.connect_timeout),
@@ -48,6 +49,7 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
                     )
                 except Exception as err:
                     self.errors.append(err)
+                self.logger.debug('GET %s %s', url, info['http_code'])
                 if info['http_code'] >= 300:
                     msg = f"Invalid HTTP code {info['http_code']}"
                     err = errors.InvalidHttpCode(msg, info['http_code'])

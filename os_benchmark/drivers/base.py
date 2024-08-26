@@ -12,7 +12,7 @@ from requests.packages.urllib3.util.retry import Retry
 
 from os_benchmark.drivers import errors
 
-USER_AGENT = 'os-benchmark'
+USER_AGENT = 'os-benchmark/1.0 (Linux; U; en-US; rv:1.9.0.14) Gecko/20090203 Firefox/3.5.16'
 MULTIPART_THRESHOLD = 64*2**20
 MULTIPART_CHUNKSIZE = 64*2**20
 MAX_CONCURRENCY = 10
