@@ -1,8 +1,6 @@
-try:
-    from pycurlb import Curler
-except ImportError:
-    pass
+from pycurlb import Curler
 from os_benchmark import errors
+from os_benchmark import utils
 from . import base
 
 

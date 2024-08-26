@@ -404,7 +404,7 @@ class Controller:
         self.print_stats(stats)
 
     def curl(self):
-        benchmark_class = base.get_benchmark('curl')
+        benchmark_class = base.get_benchmark('pycurl')
         benchmark_class.make_parser_args(self.subparser)
 
         parsed_args = self.parser.parse_known_args()[0]
