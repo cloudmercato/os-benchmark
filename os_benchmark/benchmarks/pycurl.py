@@ -36,6 +36,7 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
     def run(self, **kwargs):
         self.sleep(self.params['warmup_sleep'])
         curler = Curler()
+
         def curl():
             for url in self.urls:
                 try:
@@ -45,9 +46,14 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
                         accept_timeout_ms=int(self.driver.read_timeout*1000),
                         forbid_reuse=int(not self.params['keep_alive']),
                     )
-                    self.timings.append(info)
-                except errors.InvalidHttpCode as err:
+                except Exception as err:
                     self.errors.append(err)
+                if info['http_code'] >= 300:
+                    msg = f"Invalid HTTP code {info['http_code']}"
+                    err = errors.InvalidHttpCode(msg, info['http_code'])
+                    self.errors.append(err)
+                else:
+                    self.timings.append(info)
         self.total_time = self.timeit(curl)[0]
 
     def make_stats(self):
