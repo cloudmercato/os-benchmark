@@ -29,6 +29,7 @@ from os_benchmark.drivers import s3
 class Driver(s3.Driver):
     """Scaleway S3 Driver"""
     id = 'scaleway'
+    default_object_acl = 'public-read'
     endpoint_url = 'https://s3.fr-par.scw.cloud'
     endpoint_urls = {
         'fr-par': 'https://s3.fr-par.scw.cloud',
