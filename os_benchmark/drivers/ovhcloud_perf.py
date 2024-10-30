@@ -24,6 +24,7 @@ from os_benchmark.drivers import s3
 class Driver(s3.Driver):
     """High Performance Object Storage Driver"""
     id = 'ovhcloud_perf'
+    default_object_acl = 'public-read'
 
     def get_url(self, bucket_id, name, **kwargs):
         netloc = urlparse(self.kwargs['endpoint_url']).netloc
