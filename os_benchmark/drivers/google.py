@@ -22,6 +22,7 @@ Configuration
 import json
 import requests
 import urllib3
+import tenacity
 from google.cloud import storage
 from google.cloud.client import service_account
 from google.api_core import exceptions
@@ -54,10 +55,12 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             self.credentials = service_account.Credentials.from_service_account_info(
                 self.json,
             )
+            session = self.session
             self._client = storage.Client(
                 credentials=self.credentials,
                 project=self.json['project_id'],
             )
+            self._client._http.adapters = session.adapters
         return self._client
 
     def list_buckets(self, **kwargs):
@@ -153,6 +156,11 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         )
         parts = uploader.run(_upload)
 
+        @tenacity.retry(
+            wait=tenacity.wait_exponential(multiplier=1, max=10),
+            stop=tenacity.stop_after_attempt(10),
+            retry=tenacity.retry_if_exception_type(errors.DriverRateLimitError),
+        )
         def compose_objects(params, filename):
             url = 'https://storage.googleapis.com/storage/v1/b/%s/o/%s/compose' % (
                 bucket_id, filename
@@ -179,17 +187,24 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             compose_objects(compose_params, name)
             to_delete.extend(parts)
         else:
+            parts = sorted(parts, key=lambda n: int(n.split('-')[-1]))
             while parts:
-                parts = sorted(parts, key=lambda n: int(n.split('-')[-1]))
                 to_compose = parts[:32]
                 del parts[:32]
                 compose_params["sourceObjects"] = [
                     {'name': part} for part in to_compose
                 ]
-                compose_name = name
+                if len(parts) > 32:
+                    compose_name = f"tmp-{name}-{len(parts)}"
+                else:
+                    compose_name = name
+
                 self.logger.debug('Gathering %s multiupload parts', len(to_compose))
                 compose_objects(compose_params, compose_name)
                 to_delete.extend(to_compose)
+
+                if compose_name != name:
+                    parts.append(compose_name)
 
         bucket = storage.Bucket(self.client, bucket_id)
         self.logger.debug('Deleting %s multiupload parts', len(parts))
