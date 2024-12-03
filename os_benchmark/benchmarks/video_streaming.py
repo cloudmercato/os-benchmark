@@ -156,9 +156,10 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
                 ))
             for future in futures:
                 while not future.done():
-                    timings, errs = future.result()
-                    self.timings.extend(timings)
-                    self.errors.extend(errs)
+                    pass
+                timings, errs = future.result()
+                self.timings.extend(timings)
+                self.errors.extend(errs)
             pool.shutdown()
 
         self.total_time = self.timeit(run)[0]
