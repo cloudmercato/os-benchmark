@@ -25,6 +25,7 @@ from os_benchmark.drivers import base, errors
 
 class Driver(base.RequestsMixin, base.BaseDriver):
     id = 'storj'
+    mode = 'http'  # or storj
 
     @property
     def uplink(self):
@@ -77,7 +78,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
 
     def list_buckets(self, **kwargs):
         buckets = self.project.list_buckets()
-        return [{'id': c.id_} for c in buckets]
+        return [{'id': c.name} for c in buckets]
 
     def create_bucket(self, name, acl='public-read', **kwargs):
         bucket = self.project.create_bucket(name)
@@ -123,20 +124,33 @@ class Driver(base.RequestsMixin, base.BaseDriver):
 
     def download(self, url, block_size=65536, **kwargs):
         self.logger.debug('GET %s', url)
+        if self.mode == 'http':
+            return super().download(url, block_size=block_size, **kwargs)
+
         parsed_url = urlparse(url)
         download = self.project.download_object(parsed_url.netloc, parsed_url.path[1:])
         block_num = (download.file_size() // block_size) + 1
         for i in range(block_num):
             download.read(block_size)
 
+    def _get_link_sharing_key(self):
+        url = 'https://auth.storjsatelliteshare.io/v1/access'
+        response = self.session.post(url, json={
+            'access_grant': self.kwargs['access_grant'],
+            'public': True
+        })
+        return response.json()['access_key_id']
+
     def get_url(self, bucket_id, name, presigned=True, **kwargs):
-        # region = self.kwargs['satellite'].split('@')[1].split('.')[0]
-        # url = 'https://link.%s.storjshare.io/s/%s/%s/%s' % (
-        #     region,
-        #     self.kwargs['access_key'],
-        #     bucket_id,
-        #     name,
-        # )
+        if self.mode == 'http':
+            region = self.kwargs['satellite'].split('@')[1].split('.')[0]
+            url = 'https://link.%s.storjshare.io/raw/%s/%s/%s' % (
+                region,
+                self._get_link_sharing_key(),
+                bucket_id,
+                name,
+            )
+            return url
         url = 'storj://%s/%s' % (
             bucket_id, name
         )

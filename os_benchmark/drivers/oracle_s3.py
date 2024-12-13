@@ -22,6 +22,7 @@ from os_benchmark.drivers import s3
 class Driver(s3.Driver):
     """Oracle Cloud S3 Driver"""
     id = 'oracle_s3'
+    default_acl = 'public-read'
     default_object_acl = 'public-read'
 
     def get_url(self, bucket_id, name, **kwargs):
