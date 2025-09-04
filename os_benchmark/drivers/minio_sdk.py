@@ -96,6 +96,10 @@ class Driver(base.RequestsMixin, base.BaseDriver):
         try:
             self.client._url_open("PUT", location, **params)
         except minio_error.S3Error as err:
+            code = err.code
+            msg = err.message
+            if code == 'BucketAlreadyExists':
+                raise errors.DriverBucketAlreadyExistError(msg)
             raise errors.DriverError(err)
 
         self.client._region_map[name] = location

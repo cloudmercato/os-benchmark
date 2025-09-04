@@ -137,7 +137,9 @@ class BaseSetupObjectsBenchmark(BaseBenchmark):
             storage_class=self.storage_class,
         )
         self.bucket_id = self.bucket['id']
+        self._create_objects()
 
+    def _create_objects(self):
         max_workers = self.params.get('parallel_objects') or min(2, max(os.cpu_count(), 64))
         futures = []
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -157,6 +159,11 @@ class BaseSetupObjectsBenchmark(BaseBenchmark):
             self.bucket.get('storage_class')
 
         self.objects = self.driver.list_objects(bucket_id=self.bucket_id)
+        if not self.objects:
+            self.logger.info("Bucket %s is empty, creating %s objects of %sB", self.bucket_id, self.params['object_number'], self.params['object_size'])
+            self._create_objects()
+            self.objects = self.driver.list_objects(bucket_id=self.bucket_id)
+
         for obj_name in self.objects:
             self.urls.append(self.driver.get_url(
                 bucket_id=self.bucket_id,
@@ -189,7 +196,7 @@ class BaseSetupObjectsBenchmark(BaseBenchmark):
         except driver_errors.DriverError as err:
             self.logger.warning("Error during file uploading, tearing down the environment: %s", err)
             raise
-        self.objects.append(obj)
+        self.objects.append(obj['name'])
         self.urls.append(self.driver.get_url(
             bucket_id=self.bucket_id,
             name=obj['name'],
@@ -209,9 +216,7 @@ class BaseSetupObjectsBenchmark(BaseBenchmark):
         if self.params.get('bucket_id'):
             try:
                 self._reuse_bucket()
-                if self.objects:
-                    return
-                self.logger.warning("Bucket %s is empty", self.bucket_id)
+                return
             except driver_errors.DriverBucketUnfoundError:
                 self.logger.warning("Bucket %s not found", self.bucket_id)
         # Or create
@@ -231,7 +236,7 @@ class BaseNetworkBenchmark(BaseSetupObjectsBenchmark):
         self.obj = self.objects[0]
         url = self.driver.get_url(
             bucket_id=self.bucket_id,
-            name=self.obj['name'],
+            name=self.obj,
             bucket_name=self.bucket.get('name', self.bucket_id),
         )
         self.parsed_url = urlparse(url)

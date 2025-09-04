@@ -21,8 +21,8 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
         parser.add_argument('--storage-class', required=False)
         parser.add_argument('--bucket-prefix', required=False, type=utils.unescape)
         parser.add_argument('--bucket-suffix', required=False, type=utils.unescape)
-        parser.add_argument('--object-size', type=int, required=False)
-        parser.add_argument('--object-number', type=int, required=False)
+        parser.add_argument('--object-size', type=int, required=False, default=1)
+        parser.add_argument('--object-number', type=int, required=False, default=1)
         parser.add_argument('--object-prefix', required=False)
         parser.add_argument('--multipart-threshold', type=int, default=base.MULTIPART_THREHOLD)
         parser.add_argument('--multipart-chunksize', type=int, default=base.MULTIPART_CHUNKSIZE)
@@ -47,15 +47,17 @@ class Benchmark(base.BaseSetupObjectsBenchmark):
                         accept_timeout_ms=int(self.driver.read_timeout*1000),
                         forbid_reuse=int(not self.params['keep_alive']),
                     )
+                    self.logger.debug('GET %s %s', url, info['http_code'])
+                    if info['http_code'] >= 300:
+                        msg = f"Invalid HTTP code {info['http_code']}"
+                        err = errors.InvalidHttpCode(msg, info['http_code'])
+                        self.errors.append(err)
+                    else:
+                        self.timings.append(info)
                 except Exception as err:
+                    self.logger.warning(err)
                     self.errors.append(err)
-                self.logger.debug('GET %s %s', url, info['http_code'])
-                if info['http_code'] >= 300:
-                    msg = f"Invalid HTTP code {info['http_code']}"
-                    err = errors.InvalidHttpCode(msg, info['http_code'])
-                    self.errors.append(err)
-                else:
-                    self.timings.append(info)
+
         self.total_time = self.timeit(curl)[0]
 
     def make_stats(self):
