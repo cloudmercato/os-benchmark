@@ -222,7 +222,7 @@ class Driver(base.RequestsMixin, base.BaseDriver):
             'content_type': 'application/octet-stream',
             'size': content.size,
             'timeout': (self.connect_timeout, self.read_timeout),
-            'num_retries': 0,
+            'retry': None,
             'predefined_acl': oacl,
             'if_generation_match': None,
             'if_generation_not_match': None,
